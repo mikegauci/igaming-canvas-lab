@@ -153,6 +153,7 @@ export class WheelScene extends Scene {
     if (start.status === 'settled') {
       const { outcome, win } = start.result;
       if (win > 0) {
+        this.hud.unlock('wheel-win');
         this.wheel.showWin(outcome.segment);
         this.sounds.play('win');
         this.hud.say(
