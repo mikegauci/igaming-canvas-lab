@@ -1,4 +1,6 @@
-import { Container } from 'pixi.js';
+import { gsap } from 'gsap';
+import { Container, Graphics } from 'pixi.js';
+import { Achievements, ACHIEVEMENTS, type AchievementId } from '../achievements';
 import { onKey } from '../input';
 import type { OutcomeService, RoundRequest, RoundResult } from '../outcome';
 import { countUpSeconds } from '../presentation';
@@ -24,6 +26,8 @@ export interface GameHudOptions {
   /** Screen-reader names for the bet buttons. */
   betTitles?: readonly [lower: string, raise: string];
   panelWidth?: number;
+  /** Shared badges; defaults to the ones in localStorage. */
+  achievements?: Achievements;
 }
 
 export type RoundStart<TOutcome> =
@@ -53,10 +57,15 @@ export class GameHud extends Container {
   readonly mute: MuteButton;
   readonly panelWidth: number;
 
+  readonly achievements: Achievements;
+  private readonly toastView = new Container();
+  private readonly toastBg = new Graphics();
+  private readonly toastLabel = new Label('', 'caption', { fill: colors.bg, fontSize: 15 });
   private readonly wallet: Wallet;
   private readonly sounds: SoundManager;
   private readonly actionSize: number;
   private betting = true;
+  private toastY = 0;
   private keyBindings: (() => void)[] = [];
 
   constructor({
@@ -69,8 +78,10 @@ export class GameHud extends Container {
     betCaption = 'BET',
     betTitles = ['Lower bet', 'Raise bet'],
     panelWidth = 520,
+    achievements = new Achievements(),
   }: GameHudOptions) {
     super();
+    this.achievements = achievements;
     this.wallet = wallet;
     this.sounds = sounds;
     this.actionSize = actionSize;
@@ -119,7 +130,44 @@ export class GameHud extends Container {
       this.betCaption,
       this.panel,
       this.mute,
+      this.toastView,
     );
+    this.toastLabel.anchor.set(0.5);
+    this.toastView.addChild(this.toastBg, this.toastLabel);
+    this.toastView.alpha = 0;
+  }
+
+  /**
+   * Unlocks a badge (shown on the Casino Floor) and, the first time, slides in a toast.
+   * Returns whether it was new.
+   */
+  unlock(id: AchievementId): boolean {
+    if (!this.achievements.unlock(id)) return false;
+    const badge = ACHIEVEMENTS.find((a) => a.id === id)!;
+    this.toast(
+      `★ BADGE UNLOCKED: ${badge.title.toUpperCase()} (${this.achievements.count}/${ACHIEVEMENTS.length})`,
+    );
+    this.sounds.play('unlock');
+    return true;
+  }
+
+  /** Brief message pill under the header. */
+  toast(text: string): void {
+    this.toastLabel.text = text;
+    const width = this.toastLabel.width + 36;
+    this.toastBg
+      .clear()
+      .roundRect(-width / 2, -17, width, 34, 17)
+      .fill(colors.gold);
+    gsap.killTweensOf(this.toastView);
+    gsap
+      .timeline()
+      .fromTo(
+        this.toastView,
+        { alpha: 0, y: this.toastY - 12 },
+        { alpha: 1, y: this.toastY, duration: 0.25 },
+      )
+      .to(this.toastView, { alpha: 0, duration: 0.3, delay: 2.4 });
   }
 
   say(text: string, color: number = colors.muted): void {
@@ -149,10 +197,12 @@ export class GameHud extends Container {
     this.keyBindings = [];
   }
 
-  /** Title at (x, y) with the message line under it. */
+  /** Title at (x, y) with the message line under it, and toasts below that. */
   placeHeader(x: number, y: number): void {
     this.title.position.set(x, y);
     this.message.position.set(x, y + MESSAGE_GAP);
+    this.toastY = y + MESSAGE_GAP + 40;
+    this.toastView.position.set(x, this.toastY);
   }
 
   /**
@@ -216,6 +266,7 @@ export class GameHud extends Container {
   }
 
   override destroy(...args: Parameters<Container['destroy']>): void {
+    gsap.killTweensOf(this.toastView);
     this.unbindKeys();
     super.destroy(...args);
   }
