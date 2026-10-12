@@ -1,11 +1,12 @@
 import { sound, type PlayOptions } from '@pixi/sound';
 import { localStore, type KeyValueStore } from './storage';
+import { renderWav, type Tone } from './synth';
 
 type Listener = (muted: boolean) => void;
 
 /**
  * Thin wrapper over @pixi/sound with a mute toggle that is remembered across visits.
- * Sounds are loaded through Assets (importing @pixi/sound registers the audio loader).
+ * Sounds come from Assets (importing @pixi/sound registers the audio loader) or from `synth`.
  */
 export class SoundManager {
   private _muted: boolean;
@@ -17,6 +18,24 @@ export class SoundManager {
   ) {
     this._muted = store.get(storageKey) === '1';
     if (this._muted) sound.muteAll();
+
+    // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
+    // events; keyboard players (Space = spin) need this too. Keep listening until the context
+    // is actually running: some keys (e.g. Escape) don't count as a gesture.
+    const stopListening = () => {
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('pointerdown', unlock);
+    };
+    const unlock = () => {
+      const context = sound.context.audioContext;
+      if (!context || context.state === 'running') return stopListening();
+      context.resume().then(
+        () => context.state === 'running' && stopListening(),
+        () => undefined,
+      );
+    };
+    window.addEventListener('keydown', unlock);
+    window.addEventListener('pointerdown', unlock);
   }
 
   get muted(): boolean {
@@ -34,6 +53,13 @@ export class SoundManager {
 
   toggle(): void {
     this.setMuted(!this._muted);
+  }
+
+  /** Registers generated sounds, e.g. `{ click: [{ freq: 900, duration: 0.03 }] }`. */
+  synth(sounds: Record<string, readonly Tone[]>): void {
+    for (const [alias, tones] of Object.entries(sounds)) {
+      if (!sound.exists(alias)) sound.add(alias, { source: renderWav(tones), preload: true });
+    }
   }
 
   /** Plays a loaded sound by alias. Missing sounds are ignored so audio never breaks gameplay. */

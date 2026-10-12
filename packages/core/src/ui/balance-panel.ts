@@ -19,8 +19,13 @@ export class BalancePanel extends Container {
   private readonly bet: Field;
   private readonly win: Field;
   private readonly unsubscribe: () => void;
+  private held = false;
 
-  constructor(wallet: Wallet, width = 720, height = 76) {
+  constructor(
+    private readonly wallet: Wallet,
+    width = 720,
+    height = 76,
+  ) {
     super();
     const bg = new Graphics()
       .roundRect(0, 0, width, height, 16)
@@ -48,9 +53,23 @@ export class BalancePanel extends Container {
     this.win = field('WIN', 2, colors.gold, 0);
 
     this.unsubscribe = wallet.onChange(({ balance, bet }) => {
-      void this.tween(this.balance, balance, 0.4);
+      if (!this.held) void this.tween(this.balance, balance, 0.4);
       void this.tween(this.bet, bet, 0);
     });
+  }
+
+  /**
+   * Freezes the displayed balance. The wallet (the "server" balance) is credited as soon as a
+   * result arrives, but players should only see it go up after the win has been presented.
+   */
+  hold(): void {
+    this.held = true;
+  }
+
+  /** Shows the real balance again, tweening to it. */
+  release(): void {
+    this.held = false;
+    void this.tween(this.balance, this.wallet.balance, 0.4);
   }
 
   /** Counts the WIN field up from 0. Resolves when the count finishes. */
