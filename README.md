@@ -1,30 +1,115 @@
 # iGaming Canvas Lab
 
-Five small casino-style games built with **PixiJS v8 + TypeScript**, behind a playable arcade landing page.
+Five small casino games built with **PixiJS v8 + TypeScript**, behind a playable arcade landing
+page. Every round is decided by a (mock) server and only animated by the client, the game maths
+is unit-tested, and every game works in portrait and landscape.
 
-| Game                                                             | Status | Shows                                                           |
-| ---------------------------------------------------------------- | ------ | --------------------------------------------------------------- |
-| [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live   | Masked reel strips, ticker-driven spin, server-decided outcomes |
-| [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live   | Rotation tweens to a predetermined segment, custom easing       |
-| [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/)   | Live   | RenderTexture erase brush, reveal % detection, touch            |
-| [Crash Multiplier](https://igaming-canvas-lab.vercel.app/crash/) | Live   | Real-time game loop, state machine, cash-out timing             |
-| [Bonus Round](https://igaming-canvas-lab.vercel.app/bonus/)      | Live   | Rigged mascot, coin particles, BIG/MEGA/EPIC win sequence       |
+**Live:** <https://igaming-canvas-lab.vercel.app> (add `?view=classic` for a plain list)
+
+| Game                                                           | Shows                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Mini Slot](https://igaming-canvas-lab.vercel.app/slot/)       | Masked reel strips, reel splicing, slam-stop, exact RTP enumeration |
+| [Lucky Wheel](https://igaming-canvas-lab.vercel.app/wheel/)    | Weighted outcomes, angle maths, velocity-matched custom ease        |
+| [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/) | RenderTexture brush, CPU coverage grid, pooled confetti             |
+| [Crash](https://igaming-canvas-lab.vercel.app/crash/)          | Real-time curve, easing camera, server-timed cash-out race          |
+| [Bonus Round](https://igaming-canvas-lab.vercel.app/bonus/)    | Rigged mascot, coin particles, BIG/MEGA/EPIC roll-up (`?demo=epic`) |
 
 ## Stack
 
-PixiJS v8 · TypeScript · Vite · GSAP · Vitest · pnpm workspaces
+PixiJS v8 · TypeScript (strict) · Vite · GSAP · @pixi/sound · Vitest · pnpm workspaces · GitHub
+Actions · Vercel
 
-## Structure
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph core["@lab/core"]
+    logic["logic (pure, no Pixi)<br/>seeded RNG · outcome server · wallet<br/>state machine · achievements · synth"]
+    engine["engine<br/>createGame · SceneManager · assets<br/>input · debug overlay"]
+    ui["UI<br/>GameHud · Button · BalancePanel<br/>OddsTable · MuteButton · Confetti"]
+  end
+  hub["hub · Casino Floor"] --> core
+  slot --> core
+  wheel --> core
+  scratch --> core
+  crash --> core
+  bonus --> core
+```
 
 ```
-packages/core   shared engine: app bootstrap + letterbox resize, state machine, outcome service, wallet, UI
-apps/hub        landing page
-apps/<game>     one Vite app per game, served at /<game>/
+packages/core   shared engine; `@lab/core/logic` is the Pixi-free part that tests import
+apps/hub        the Casino Floor landing page (and the classic HTML list)
+apps/<game>     one Vite app per game, served at /<game>/; maths in src/logic, Pixi in src/view
 scripts/        assemble.mjs merges every app build into dist/ for Vercel
 ```
 
-**Key principle:** the outcome of every round is decided by an outcome service (mocked here with a
-seeded RNG, as a server would), and the animation only _displays_ it.
+### How a round works
+
+The outcome is decided before anything moves, the way a real game server works. The client's
+job is to animate towards a result it was handed, never to decide one.
+
+```mermaid
+sequenceDiagram
+  participant P as Player
+  participant S as Game scene (Pixi)
+  participant H as GameHud
+  participant O as Outcome server (mock)
+  P->>S: SPIN
+  S->>H: startRound()
+  H->>H: wallet.debit(stake), hold the balance display
+  H->>O: play({ bet })
+  Note over S: reels / wheel start moving
+  O-->>H: { outcome, win } from a seeded RNG + the game's resolver
+  H->>H: wallet.credit(win): the round is settled
+  H-->>S: result
+  S->>S: animate to the decided outcome
+  S->>H: presentWin(), endRound(): the display catches up
+```
+
+Each game supplies only a pure **resolver** (stake + RNG → outcome + win). `MockOutcomeServer`
+adds the seeded RNG and fake network latency. The crash game has its own `MockCrashServer`,
+because cash-outs are judged on the server's clock while the round is running.
+
+### Performance notes
+
+- **Bake vector art once.** Slot symbols, the wheel face, scratch coins and particle textures are
+  drawn with `Graphics` and turned into textures with `generateTexture` at the screen's
+  resolution, so gameplay is batched sprites.
+- **Masks and text.** One rectangular mask covers all slot reels, and fast-changing numbers (win
+  counters, the crash multiplier) use `BitmapText`.
+- **Pooled particles.** `Confetti` is a `ParticleContainer` with pre-allocated pieces, recycled
+  across bursts (one draw call). It skips rendering while idle.
+- **No GPU readback.** The scratch card tracks coverage on a CPU grid stamped with the same brush
+  strokes it paints into the `RenderTexture`.
+- **Work moved out of the frame.** RTP and odds are computed at build time (Vite `define`). The
+  ticker pauses on hidden tabs, and resolution is capped at 2×.
+- **Light first load.** Each game loads 154–160 KB of gzipped JS. The landing page loads Pixi
+  only for the arcade view: 1.7 KB of JS for the classic list, 210 KB for the arcade.
+- **Measured.** `?debug=1` on any page shows FPS, WebGL draw calls per frame (about 9–21 in
+  the games, about 40 on the arcade floor) and node count.
+
+### Testing
+
+`pnpm test` runs 94 tests over the pure logic, in milliseconds and without a browser:
+
+- exact RTP by enumerating every reel stop, cross-checked against seeded simulations
+- prizes, segments and stops drawn as often as their weights say
+- the wheel's angle maths round trip, the ease's shape and starting slope
+- the scratch card's layouts and coverage grid geometry
+- the crash latency race on fake timers: a cash-out that looks safe on screen loses if it
+  reaches the server after the crash
+- the bonus count-up plan, wallet and badge persistence, the state machine and the WAV synth
+
+CI (GitHub Actions) runs typecheck, lint, tests and the full build on every push and PR.
+
+### URL flags
+
+| Flag                    | Where    | Does                                               |
+| ----------------------- | -------- | -------------------------------------------------- |
+| `?debug=1`              | any page | FPS, draw calls and node count overlay             |
+| `?seed=123`             | any game | replays the same sequence of rounds                |
+| `?demo=big\|mega\|epic` | bonus    | every pick lands that win tier (says so on screen) |
+| `?view=classic\|arcade` | hub      | forces the plain list or the Casino Floor          |
 
 ## Mini Slot (`apps/slot`)
 
@@ -153,9 +238,6 @@ pnpm test         # unit tests (pure game logic, no Pixi)
 pnpm typecheck && pnpm lint
 pnpm build        # builds every app into dist/
 ```
-
-URL flags on any game: `?debug=1` shows FPS, draw calls and node count; `?seed=123` replays the
-same sequence of rounds.
 
 ## License
 
