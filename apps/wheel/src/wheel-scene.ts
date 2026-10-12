@@ -7,6 +7,7 @@ import {
   Label,
   MuteButton,
   onKey,
+  type OddsTable,
   Scene,
   StateMachine,
   type OutcomeService,
@@ -17,7 +18,7 @@ import {
 } from '@lab/core';
 import type { Renderer, Ticker } from 'pixi.js';
 import type { WheelOutcome, WheelRequest, WheelStats } from './logic/prizes';
-import { OddsPanel } from './view/odds';
+import { createOddsTable } from './view/odds';
 import { PrizeWheel, RADIUS } from './view/wheel';
 
 type State = 'idle' | 'spinning' | 'landing' | 'presenting';
@@ -59,7 +60,7 @@ export class WheelScene extends Scene {
   });
   private readonly message = new Label('', 'body', { fill: colors.muted });
   private readonly wheel: PrizeWheel;
-  private readonly odds: OddsPanel;
+  private readonly odds: OddsTable;
   private readonly panel: BalancePanel;
   private readonly mute: MuteButton;
   private readonly spinButton = new Button({
@@ -104,7 +105,7 @@ export class WheelScene extends Scene {
       this.lastTick = now;
       sounds.play('tick');
     };
-    this.odds = new OddsPanel(stats);
+    this.odds = createOddsTable(stats);
     this.panel = new BalancePanel(wallet, PANEL_WIDTH);
     this.mute = new MuteButton(sounds);
 
@@ -137,7 +138,7 @@ export class WheelScene extends Scene {
   }
 
   override resize({ width, height, orientation }: Viewport): void {
-    const table = this.odds.arrange(orientation);
+    const table = this.odds.arrange(orientation === 'landscape' ? 1 : 2);
 
     if (orientation === 'landscape') {
       this.wheel.position.set(440, 375);
