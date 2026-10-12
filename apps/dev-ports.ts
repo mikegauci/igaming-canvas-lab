@@ -6,4 +6,5 @@ export const DEV_PORTS = {
   hub: 5173,
   slot: 5174,
   wheel: 5175,
+  scratch: 5176,
 } as const;
