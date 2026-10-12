@@ -1,0 +1,15 @@
+{
+  "name": "@lab/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "pixi.js": "^8.22.0"
+  }
+}
