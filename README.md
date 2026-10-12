@@ -62,13 +62,15 @@ same sequence of rounds.
 
 ## Deployment
 
-GitHub Actions deploys to Vercel with the Vercel CLI once the checks pass: every PR gets a
-preview (linked from the PR), and every push to `main` goes to production. Vercel's own Git
-deployments are turned off in `vercel.json`, because they kept failing with "Git information
-retrieval failed" before the build even started.
+GitHub Actions deploys after the checks pass: every PR gets a preview (linked from the PR) and
+every push to `main` goes to production. `scripts/deploy.mjs` uploads the tested `dist/` build
+straight to the Vercel REST API, so nothing is rebuilt on Vercel, and it retries failed
+deployments. Vercel's own Git deployments are turned off in `vercel.json` because they kept
+failing with "Git information retrieval failed".
 
-One-time setup: create a token at <https://vercel.com/account/settings/tokens> and save it as
-the `VERCEL_TOKEN` repository secret (`gh secret set VERCEL_TOKEN`).
+One-time setup: create a token at <https://vercel.com/account/settings/tokens> with access to the
+`igaming-canvas-lab` project and save it as the `VERCEL_TOKEN` repository secret
+(`gh secret set VERCEL_TOKEN`).
 
 ## License
 
