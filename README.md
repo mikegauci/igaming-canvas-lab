@@ -7,7 +7,7 @@ Five small casino-style games built with **PixiJS v8 + TypeScript**, plus a play
 | [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live    | Masked reel strips, ticker-driven spin, server-decided outcomes |
 | [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live    | Rotation tweens to a predetermined segment, custom easing       |
 | [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/)   | Live    | RenderTexture erase brush, reveal % detection, touch            |
-| Crash Multiplier                                                 | Planned | Real-time game loop, state machine, cash-out timing             |
+| [Crash Multiplier](https://igaming-canvas-lab.vercel.app/crash/) | Live    | Real-time game loop, state machine, cash-out timing             |
 | Bonus Round                                                      | Planned | Spine animation, particles, big-win sequence                    |
 
 ## Stack
@@ -80,6 +80,27 @@ A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
   thousands of layouts.
 - **Pooled confetti.** `Confetti` in `@lab/core` is a `ParticleContainer` of 400 pre-allocated
   quads (one draw call) recycled across bursts, also used for foil flakes while scratching.
+
+## Crash (`apps/crash`)
+
+Bet, watch the multiplier climb, and cash out before it crashes. Space bets and cashes out, and A
+cycles the auto cash-out target.
+
+- **Server-authoritative timing.** `MockCrashServer` draws the crash point when the round starts
+  and keeps it secret until it pushes the crash. Cash-outs are judged on the server's clock when
+  the request arrives, so network delay counts against the player. The animation is never the
+  authority. A test shows a request that looks safe on screen losing because it reached the
+  server after the crash.
+- **Heavy-tailed maths.** `crashPointFrom(r) = 0.97 / (1 − r)`, rounded down to hundredths, gives
+  P(reach x) = 0.97 / x. About 4% of rounds bust at 1.00×, and auto cash-out at 2× returns
+  96.5%. Tests check the distribution and the RTP against 200,000 simulated rounds.
+- **Real-time chart.** The curve is redrawn each frame from `e^(0.15·t)`, and the axes ease
+  towards the tip so the view zooms out as the multiplier climbs. The rocket follows the curve's
+  on-screen slope, and stars stream past faster as it climbs. Numbers use `BitmapText`. About
+  9 draw calls per frame.
+- **Race-safe client.** An instant bust can arrive before the start acknowledgement, and a
+  cash-out verdict can arrive after the crash message. Both are handled, and a confirmed cash-out
+  is always credited.
 
 ## Development
 
