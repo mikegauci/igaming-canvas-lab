@@ -1,6 +1,6 @@
 # iGaming Canvas Lab
 
-Five small casino-style games built with **PixiJS v8 + TypeScript**, plus a playable landing page.
+Five small casino-style games built with **PixiJS v8 + TypeScript**, behind a playable arcade landing page.
 
 | Game                                                             | Status | Shows                                                           |
 | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------- |
@@ -122,6 +122,26 @@ waiting for a rare draw, and the screen says so.
   sad. The scene only calls `play(animation)`, so a `spine-pixi-v8` skeleton could take its
   place. Spine isn't used yet: its runtime licence requires a Spine Editor licence to publish a
   site that runs it.
+
+## The Casino Floor (`apps/hub`)
+
+The landing page is a game too: a neon promenade with one arcade cabinet per game. Nothing to
+learn: hover (or use the arrow keys) to light a cabinet, and click (or press Enter) to zoom into
+its screen and open the game. On phones the row becomes a swipeable carousel with dots.
+
+- **Attract mode.** Each cabinet's screen loops a tiny preview of its game: spinning reels, a
+  coasting wheel, a foil wipe, a crash curve, a bouncing mascot.
+- **Parallax night scene.** Sky, two Valletta-style skylines (domes, bell towers, lit windows),
+  the harbour, the promenade and strings of bulbs move at different depths as the camera pans.
+  The art extends past the design area, so any screen shape is filled.
+- **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
+  `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
+  floor, and earning all five lights the HIRE ME sign, which opens the contact panel at any time.
+- **Classic view.** A plain HTML list of the games is always in the page for search engines,
+  link previews and screen readers. It's the default for `prefers-reduced-motion` and one click
+  away otherwise. Pixi and the floor are loaded only when the arcade is shown: the classic view
+  needs 1.7 KB of JavaScript, the arcade 210 KB (gzipped).
+- **Easter egg.** The Konami code makes it rain coins.
 
 ## Development
 
