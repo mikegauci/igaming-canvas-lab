@@ -60,18 +60,6 @@ pnpm build        # builds every app into dist/
 URL flags on any game: `?debug=1` shows FPS, draw calls and node count; `?seed=123` replays the
 same sequence of rounds.
 
-## Deployment
-
-GitHub Actions deploys after the checks pass: every PR gets a preview (linked from the PR) and
-every push to `main` goes to production. `scripts/deploy.mjs` uploads the tested `dist/` build
-straight to the Vercel REST API, so nothing is rebuilt on Vercel, and it retries failed
-deployments. Vercel's own Git deployments are turned off in `vercel.json` because they kept
-failing with "Git information retrieval failed".
-
-One-time setup: create a token at <https://vercel.com/account/settings/tokens> with access to the
-`igaming-canvas-lab` project and save it as the `VERCEL_TOKEN` repository secret
-(`gh secret set VERCEL_TOKEN`).
-
 ## License
 
 MIT. Third-party assets are listed in [CREDITS.md](CREDITS.md).

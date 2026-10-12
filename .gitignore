@@ -147,6 +147,3 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
-
-# Vercel CLI project link
-.vercel

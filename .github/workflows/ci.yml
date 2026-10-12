@@ -4,15 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Superseded PR pushes are cancelled; production deploys on main always finish, in order.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -29,40 +20,3 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
-      # The deploy job ships exactly this build.
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist
-          retention-days: 7
-
-  # Deploys go straight to the Vercel REST API (scripts/deploy.mjs). Vercel's Git integration is
-  # off in vercel.json because it kept failing with "Git information retrieval failed", and the
-  # Vercel CLI rejected the token while loading the user. Only the build that passed `check` is
-  # deployed: previews for PRs, production for main.
-  deploy:
-    needs: check
-    # Fork PRs get no secrets, so skip them instead of failing.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-    environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Preview' }}
-      url: ${{ steps.deploy.outputs.url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
-      - id: deploy
-        run: node scripts/deploy.mjs ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: team_Oacq94DcLo9uLc6c3p1afop5
-          VERCEL_PROJECT_ID: prj_r4fo17glfBMwIfBZLjudUy2byxtT
