@@ -60,6 +60,16 @@ pnpm build        # builds every app into dist/
 URL flags on any game: `?debug=1` shows FPS, draw calls and node count; `?seed=123` replays the
 same sequence of rounds.
 
+## Deployment
+
+GitHub Actions deploys to Vercel with the Vercel CLI once the checks pass: every PR gets a
+preview (linked from the PR), and every push to `main` goes to production. Vercel's own Git
+deployments are turned off in `vercel.json`, because they kept failing with "Git information
+retrieval failed" before the build even started.
+
+One-time setup: create a token at <https://vercel.com/account/settings/tokens> and save it as
+the `VERCEL_TOKEN` repository secret (`gh secret set VERCEL_TOKEN`).
+
 ## License
 
 MIT. Third-party assets are listed in [CREDITS.md](CREDITS.md).

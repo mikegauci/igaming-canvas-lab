@@ -4,6 +4,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Superseded PR pushes are cancelled; production deploys on main always finish, in order.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -20,3 +29,58 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+
+  # Deploys go through the Vercel CLI instead of Vercel's Git integration (switched off in
+  # vercel.json), which kept failing with "Git information retrieval failed". Only code that
+  # passed `check` is deployed: previews for PRs, production for main.
+  deploy:
+    needs: check
+    # Fork PRs get no secrets, so skip them instead of failing.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_CLI: vercel@62.7.0
+      VERCEL_SCOPE: mikegaucis-projects
+      VERCEL_PROJECT: igaming-canvas-lab
+      TARGET: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      PROD_FLAG: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+    steps:
+      - name: Check for Vercel token
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Missing VERCEL_TOKEN repository secret. See README > Deployment."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Link Vercel project
+        run: npx --yes "$VERCEL_CLI" link --yes --project "$VERCEL_PROJECT" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+      - name: Pull project settings
+        run: npx --yes "$VERCEL_CLI" pull --yes --environment="$TARGET" --token "$VERCEL_TOKEN"
+      - name: Build
+        run: npx --yes "$VERCEL_CLI" build $PROD_FLAG --token "$VERCEL_TOKEN"
+      - name: Deploy
+        id: deploy
+        # Uploads occasionally fail on a transient network/API error; retry before giving up.
+        run: |
+          for attempt in 1 2 3; do
+            if url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt $PROD_FLAG --token "$VERCEL_TOKEN"); then
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::warning::Deploy attempt $attempt failed, retrying"
+            sleep $((attempt * 15))
+          done
+          exit 1
