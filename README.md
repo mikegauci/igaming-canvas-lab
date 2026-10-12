@@ -5,7 +5,7 @@ Five small casino-style games built with **PixiJS v8 + TypeScript**, plus a play
 | Game                                                             | Status  | Shows                                                           |
 | ---------------------------------------------------------------- | ------- | --------------------------------------------------------------- |
 | [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live    | Masked reel strips, ticker-driven spin, server-decided outcomes |
-| Lucky Spin Wheel                                                 | Planned | Rotation tweens to a predetermined segment, custom easing       |
+| [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live    | Rotation tweens to a predetermined segment, custom easing       |
 | Scratch Card                                                     | Planned | RenderTexture erase brush, reveal % detection, touch            |
 | Crash Multiplier                                                 | Planned | Real-time game loop, state machine, cash-out timing             |
 | Bonus Round                                                      | Planned | Spine animation, particles, big-win sequence                    |
@@ -45,6 +45,25 @@ A 3×3, 5-line slot. Space spins, pressing it again slam-stops the reels, and �
   (`?debug=1`).
 - **Display balance vs real balance.** The wallet is credited as soon as the result arrives. The
   balance panel holds the old figure until the win count-up has finished.
+
+## Lucky Wheel (`apps/wheel`)
+
+A 12-segment prize wheel. Space spins, and pressing it again makes the wheel land faster.
+
+- **Weighted, server-decided outcome.** The segments look equal, but the server picks one by
+  weight, and also picks where inside it the pointer stops, so seeded replays are exact.
+  `exactStats()` gives **RTP 95.6%**, with a 50× jackpot at 0.4%; the odds panel shows the same
+  figures.
+- **Angle maths.** `targetRotation()` finds the forward rotation, at least a minimum distance away,
+  that puts the chosen spot under the pointer. Tests check this round trip on 500 random cases.
+- **Custom ease.** `createWheelEase()` decelerates on a power curve, creeps just past the target
+  and settles back with a cosine, so the pointer sometimes slips over a peg and back. The tween
+  duration is chosen so the ease's starting speed equals the free-spin speed, so there's no jolt
+  when the result arrives.
+- **Pointer flicks.** Pegs crossing the pointer, forwards or backwards, are counted from the
+  rotation each frame and kick the pointer with an elastic spring, plus a throttled tick sound.
+- **Cheap rendering.** The face (12 wedges, labels and pegs) is baked into one texture, and the
+  rim bulbs share one tinted texture. About 10 draw calls per frame.
 
 ## Development
 

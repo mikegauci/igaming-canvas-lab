@@ -13,3 +13,4 @@ export {
 export { Wallet, formatCredits, type WalletOptions, type WalletState } from './wallet';
 export { localStore, memoryStore, type KeyValueStore } from './storage';
 export { renderWav, type Tone } from './synth';
+export { countUpSeconds } from './presentation';
