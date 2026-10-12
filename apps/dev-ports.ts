@@ -8,4 +8,5 @@ export const DEV_PORTS = {
   wheel: 5175,
   scratch: 5176,
   crash: 5177,
+  bonus: 5178,
 } as const;

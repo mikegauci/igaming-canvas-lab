@@ -2,17 +2,17 @@
 
 Five small casino-style games built with **PixiJS v8 + TypeScript**, plus a playable landing page.
 
-| Game                                                             | Status  | Shows                                                           |
-| ---------------------------------------------------------------- | ------- | --------------------------------------------------------------- |
-| [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live    | Masked reel strips, ticker-driven spin, server-decided outcomes |
-| [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live    | Rotation tweens to a predetermined segment, custom easing       |
-| [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/)   | Live    | RenderTexture erase brush, reveal % detection, touch            |
-| [Crash Multiplier](https://igaming-canvas-lab.vercel.app/crash/) | Live    | Real-time game loop, state machine, cash-out timing             |
-| Bonus Round                                                      | Planned | Spine animation, particles, big-win sequence                    |
+| Game                                                             | Status | Shows                                                           |
+| ---------------------------------------------------------------- | ------ | --------------------------------------------------------------- |
+| [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live   | Masked reel strips, ticker-driven spin, server-decided outcomes |
+| [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live   | Rotation tweens to a predetermined segment, custom easing       |
+| [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/)   | Live   | RenderTexture erase brush, reveal % detection, touch            |
+| [Crash Multiplier](https://igaming-canvas-lab.vercel.app/crash/) | Live   | Real-time game loop, state machine, cash-out timing             |
+| [Bonus Round](https://igaming-canvas-lab.vercel.app/bonus/)      | Live   | Rigged mascot, coin particles, BIG/MEGA/EPIC win sequence       |
 
 ## Stack
 
-PixiJS v8 · TypeScript · Vite · GSAP · Spine (`@esotericsoftware/spine-pixi-v8`) · Vitest · pnpm workspaces
+PixiJS v8 · TypeScript · Vite · GSAP · Vitest · pnpm workspaces
 
 ## Structure
 
@@ -101,6 +101,27 @@ cycles the auto cash-out target.
 - **Race-safe client.** An instant bust can arrive before the start acknowledgement, and a
   cash-out verdict can arrive after the crash message. Both are handled, and a confirmed cash-out
   is always credited.
+
+## Bonus Round (`apps/bonus`)
+
+Pick one of three chests (click, or press 1, 2 or 3). Big prizes set off the celebration.
+`?demo=big`, `?demo=mega` or `?demo=epic` forces that tier so the sequence can be seen without
+waiting for a rare draw, and the screen says so.
+
+- **Server-decided pick.** The pick is cosmetic: the server decides the prize, and what the
+  other two chests held, when the chest is picked. RTP is 97%, a pick pays on 63% of tries, and a
+  BIG WIN or better comes up 1 in 50.
+- **BIG → MEGA → EPIC roll-up.** `planCountUp()` turns a win into contiguous steps: the banner
+  starts at BIG and upgrades as the counter passes 25× and 50× the stake. Each upgrade fires a
+  coin burst, a screen shake and a sound, and the whole thing is one GSAP timeline that Space or
+  a tap skips to the end. Tests check the steps.
+- **Coin shower.** A pooled `ParticleContainer` (`Confetti` from `@lab/core` with a coin
+  texture) holds 360 coins that spin by squashing their x scale. It's one draw call.
+- **Rigged mascot, ready for Spine.** "Lucky" is a skeleton of bone containers (body, face, arms
+  and legs on their joints) animated by GSAP timelines: idle, anticipate, cheer, celebrate and
+  sad. The scene only calls `play(animation)`, so a `spine-pixi-v8` skeleton could take its
+  place. Spine isn't used yet: its runtime licence requires a Spine Editor licence to publish a
+  site that runs it.
 
 ## Development
 
