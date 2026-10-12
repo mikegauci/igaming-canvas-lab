@@ -9,6 +9,10 @@ export interface ButtonOptions {
   color?: number;
   textColor?: number;
   fontSize?: number;
+  /** Screen-reader name when the visible label isn't descriptive (e.g. '+'). */
+  title?: string;
+  /** Keyboard shortcut announced after the name, e.g. 'Space'. */
+  shortcut?: string;
   onPress?: () => void;
 }
 
@@ -20,6 +24,8 @@ export class Button extends Container {
   onPress?: () => void;
   private readonly bg = new Graphics();
   private readonly textView: Text;
+  private readonly title?: string;
+  private readonly shortcut?: string;
   private _enabled = true;
 
   constructor({
@@ -29,10 +35,14 @@ export class Button extends Container {
     color = colors.neon,
     textColor = colors.bg,
     fontSize = 24,
+    title,
+    shortcut,
     onPress,
   }: ButtonOptions) {
     super();
     this.onPress = onPress;
+    this.title = title;
+    this.shortcut = shortcut;
 
     this.bg.roundRect(-width / 2, -height / 2, width, height, height / 2).fill(color);
     this.textView = new Text({
@@ -46,7 +56,7 @@ export class Button extends Container {
     this.cursor = 'pointer';
     this.accessible = true;
     this.accessibleType = 'button';
-    this.accessibleTitle = label;
+    this.updateAccessibleTitle();
 
     this.on('pointerover', () => this.animateTo(1.05));
     this.on('pointerout', () => this.animateTo(1));
@@ -64,7 +74,7 @@ export class Button extends Container {
 
   set text(value: string) {
     this.textView.text = value;
-    this.accessibleTitle = value;
+    this.updateAccessibleTitle();
   }
 
   get enabled(): boolean {
@@ -82,6 +92,11 @@ export class Button extends Container {
   override destroy(...args: Parameters<Container['destroy']>): void {
     gsap.killTweensOf(this.scale);
     super.destroy(...args);
+  }
+
+  private updateAccessibleTitle() {
+    const name = this.title ?? this.textView.text;
+    this.accessibleTitle = this.shortcut ? `${name} (${this.shortcut})` : name;
   }
 
   private animateTo(scale: number, duration = 0.12) {

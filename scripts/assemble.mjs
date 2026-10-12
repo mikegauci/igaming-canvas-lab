@@ -7,7 +7,11 @@ const root = new URL('..', import.meta.url).pathname;
 const out = join(root, 'dist');
 rmSync(out, { recursive: true, force: true });
 
-for (const app of readdirSync(join(root, 'apps'))) {
+const apps = readdirSync(join(root, 'apps'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+for (const app of apps) {
   const src = join(root, 'apps', app, 'dist');
   if (!existsSync(src)) throw new Error(`Missing build output: apps/${app}/dist`);
   cpSync(src, app === 'hub' ? out : join(out, app), { recursive: true });

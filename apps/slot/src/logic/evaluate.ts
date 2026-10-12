@@ -23,7 +23,8 @@ export interface SpinOutcome {
   wins: LineWin[];
 }
 
-const mod = (n: number, m: number) => ((n % m) + m) % m;
+/** Wrap-around index into a reel strip; also used by the reel view so screen and server agree. */
+export const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 export function gridAt(stops: readonly number[], strips = REEL_STRIPS): Grid {
   return strips.map((strip, reel) =>

@@ -71,8 +71,7 @@ const draw: Record<SymbolId, () => Container> = {
     });
     label.anchor.set(0.5);
     label.position.set(75, 78);
-    // generateTexture ignores the root's own transform, so position the text inside a wrapper.
-    return new Container({ children: [label] });
+    return label;
   },
   diamond: () => {
     const g = new Graphics();
@@ -95,7 +94,9 @@ const draw: Record<SymbolId, () => Container> = {
 export function createSymbolTextures(renderer: Renderer): Record<SymbolId, Texture> {
   const frame = new Rectangle(0, 0, SIZE, SIZE);
   const entries = SYMBOLS.map((id) => {
-    const art = draw[id]();
+    // generateTexture ignores the target's own transform, so wrap the art: any position set
+    // on it inside draw() then still counts.
+    const art = new Container({ children: [draw[id]()] });
     const texture = renderer.generateTexture({
       target: art,
       frame,

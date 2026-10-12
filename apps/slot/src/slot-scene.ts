@@ -9,12 +9,13 @@ import {
   Scene,
   StateMachine,
   type OutcomeService,
+  type RoundResult,
   type SoundManager,
   type Viewport,
   type Wallet,
 } from '@lab/core';
 import type { Texture, Ticker } from 'pixi.js';
-import type { SymbolId } from './logic/config';
+import { REEL_STRIPS, type SymbolId } from './logic/config';
 import type { SpinOutcome, SpinRequest } from './logic/evaluate';
 import { countUpSeconds } from './logic/presentation';
 import type { SlotStats } from './logic/stats';
@@ -23,6 +24,13 @@ import { SlotMachine } from './view/slot-machine';
 
 type State = 'idle' | 'spinning' | 'landing' | 'presenting';
 type Event = 'spin' | 'result' | 'failed' | 'landed' | 'done';
+
+const SPIN_LABELS: Record<State, string> = {
+  idle: 'SPIN',
+  spinning: 'STOP',
+  landing: 'STOP',
+  presenting: 'SKIP',
+};
 
 export interface SlotSceneOptions {
   textures: Record<SymbolId, Texture>;
@@ -55,13 +63,16 @@ export class SlotScene extends Scene {
   private readonly panel: BalancePanel;
   private readonly mute: MuteButton;
   private readonly spinButton = new Button({
-    label: 'SPIN',
+    label: SPIN_LABELS.idle,
+    shortcut: 'Space',
     width: 150,
     height: 150,
     fontSize: 34,
   });
   private readonly betDown = new Button({
     label: '−',
+    title: 'Lower bet',
+    shortcut: 'Arrow Down',
     width: 64,
     height: 64,
     fontSize: 34,
@@ -69,6 +80,8 @@ export class SlotScene extends Scene {
   });
   private readonly betUp = new Button({
     label: '+',
+    title: 'Raise bet',
+    shortcut: 'Arrow Up',
     width: 64,
     height: 64,
     fontSize: 34,
@@ -76,8 +89,8 @@ export class SlotScene extends Scene {
   });
   private readonly betCaption = new Label('BET', 'caption');
   /** Last result shown, so a failed round can land the reels back where they were. */
-  private lastStops = [0, 0, 0];
-  private readonly unbindKeys: (() => void)[];
+  private lastStops = REEL_STRIPS.map(() => 0);
+  private keyBindings: (() => void)[] = [];
 
   constructor({ textures, stats, wallet, sounds, server }: SlotSceneOptions) {
     super();
@@ -94,9 +107,6 @@ export class SlotScene extends Scene {
     this.title.anchor.set(0.5);
     this.message.anchor.set(0.5);
     this.betCaption.anchor.set(0.5);
-    this.spinButton.accessibleTitle = 'Spin (Space)';
-    this.betDown.accessibleTitle = 'Lower bet (Arrow Down)';
-    this.betUp.accessibleTitle = 'Raise bet (Arrow Up)';
 
     this.spinButton.onPress = () => this.onSpinPressed();
     this.betDown.onPress = () => this.changeBet(-1);
@@ -115,11 +125,6 @@ export class SlotScene extends Scene {
       this.mute,
     );
 
-    this.unbindKeys = [
-      onKey('Space', () => this.onSpinPressed()),
-      onKey('ArrowUp', () => this.changeBet(1)),
-      onKey('ArrowDown', () => this.changeBet(-1)),
-    ];
     this.round.onChange(() => this.syncControls());
     this.say('Press SPIN or Space');
   }
@@ -160,8 +165,28 @@ export class SlotScene extends Scene {
     }
   }
 
+  // Keys are live only while this is the current scene; destroy() covers teardown without exit.
+  override enter(): void {
+    this.unbindKeys();
+    this.keyBindings = [
+      onKey('Space', () => this.onSpinPressed()),
+      onKey('ArrowUp', () => this.changeBet(1)),
+      onKey('ArrowDown', () => this.changeBet(-1)),
+    ];
+  }
+
   override exit(): void {
-    this.unbindKeys.forEach((unbind) => unbind());
+    this.unbindKeys();
+  }
+
+  override destroy(...args: Parameters<Scene['destroy']>): void {
+    this.unbindKeys();
+    super.destroy(...args);
+  }
+
+  private unbindKeys() {
+    this.keyBindings.forEach((unbind) => unbind());
+    this.keyBindings = [];
   }
 
   private onSpinPressed() {
@@ -201,19 +226,22 @@ export class SlotScene extends Scene {
     this.panel.hold();
     this.machine.spin();
 
-    let outcome: SpinOutcome | null = null;
-    let win = 0;
-    try {
-      const result = await this.server.play({ bet });
-      outcome = result.outcome;
-      win = result.win;
+    // Only the server call is guarded: a local error after the round settled must not be
+    // mistaken for a failed round (and refund a bet that was already played).
+    const result: RoundResult<SpinOutcome> | null = await this.server
+      .play({ bet })
+      .catch(() => null);
+
+    if (result) {
       // The server has already settled the round, so credit now. The panel shows it later.
-      this.wallet.credit(win);
+      this.wallet.credit(result.win);
       this.round.send('result');
-    } catch {
+    } else {
       this.wallet.credit(bet);
       this.round.send('failed');
     }
+    const outcome = result?.outcome ?? null;
+    const win = result?.win ?? 0;
 
     await this.machine.stop(outcome?.stops ?? this.lastStops);
     this.round.send('landed');
@@ -238,12 +266,7 @@ export class SlotScene extends Scene {
   private syncControls() {
     const state = this.round.state;
     const idle = state === 'idle';
-    this.spinButton.text =
-      state === 'spinning' || state === 'landing'
-        ? 'STOP'
-        : state === 'presenting'
-          ? 'SKIP'
-          : 'SPIN';
+    this.spinButton.text = SPIN_LABELS[state];
     this.betDown.enabled = idle;
     this.betUp.enabled = idle;
   }

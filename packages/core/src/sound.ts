@@ -20,13 +20,22 @@ export class SoundManager {
     if (this._muted) sound.muteAll();
 
     // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
-    // events; keyboard players (Space = spin) need this too.
+    // events; keyboard players (Space = spin) need this too. Keep listening until the context
+    // is actually running: some keys (e.g. Escape) don't count as a gesture.
+    const stopListening = () => {
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('pointerdown', unlock);
+    };
     const unlock = () => {
       const context = sound.context.audioContext;
-      if (context?.state === 'suspended') void context.resume();
+      if (!context || context.state === 'running') return stopListening();
+      context.resume().then(
+        () => context.state === 'running' && stopListening(),
+        () => undefined,
+      );
     };
-    window.addEventListener('keydown', unlock, { once: true });
-    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock);
+    window.addEventListener('pointerdown', unlock);
   }
 
   get muted(): boolean {

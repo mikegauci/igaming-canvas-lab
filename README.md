@@ -51,7 +51,7 @@ A 3Ã—3, 5-line slot. Space spins, pressing it again slam-stops the reels, and â†
 ```bash
 corepack enable
 pnpm install
-pnpm dev          # hub
+pnpm dev          # every app; open http://localhost:5173 (the hub proxies /slot/ etc.)
 pnpm test         # unit tests (pure game logic, no Pixi)
 pnpm typecheck && pnpm lint
 pnpm build        # builds every app into dist/

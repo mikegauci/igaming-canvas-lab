@@ -1,7 +1,6 @@
 import { createGame, MockOutcomeServer, seedFromQuery, SoundManager, Wallet } from '@lab/core';
 import { BET_LEVELS } from './logic/config';
 import { resolveSpin } from './logic/evaluate';
-import { exactStats } from './logic/stats';
 import { SlotScene } from './slot-scene';
 import { createSymbolTextures } from './view/symbol-textures';
 
@@ -32,7 +31,7 @@ sounds.synth({
 await game.scenes.change(
   new SlotScene({
     textures: createSymbolTextures(game.app.renderer),
-    stats: exactStats(),
+    stats: __SLOT_STATS__,
     // Same storage key as the hub and other games, so the balance carries between them.
     wallet: new Wallet({ betLevels: BET_LEVELS, defaultBet: 25 }),
     sounds,

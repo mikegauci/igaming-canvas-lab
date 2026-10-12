@@ -70,6 +70,21 @@ describe('resolveSpin', () => {
     }
   });
 
+  it('can land on every stop of every reel, roughly equally often', () => {
+    const rng = createRng(9);
+    const perStop = 2000;
+    const counts = REEL_STRIPS.map((strip) => new Array<number>(strip.length).fill(0));
+    for (let i = 0; i < perStop * REEL_STRIPS[0]!.length; i++) {
+      resolveSpin({ bet: 5 }, rng).outcome.stops.forEach((stop, reel) => counts[reel]![stop]!++);
+    }
+    for (const reel of counts) {
+      for (const count of reel) {
+        expect(count).toBeGreaterThan(perStop * 0.85);
+        expect(count).toBeLessThan(perStop * 1.15);
+      }
+    }
+  });
+
   it('rejects bets that do not split evenly across the lines', () => {
     expect(() => resolveSpin({ bet: 7 }, createRng(1))).toThrow(RangeError);
   });
@@ -88,12 +103,19 @@ describe('slot maths', () => {
     expect(stats.hitRate).toBeLessThan(0.25);
   });
 
-  it('agrees with a long seeded simulation', () => {
+  it('agrees with a long seeded simulation, within 4 standard errors', () => {
     const rng = createRng(2024);
     const spins = 200_000;
-    let returned = 0;
-    for (let i = 0; i < spins; i++) returned += resolveSpin({ bet: 5 }, rng).win;
-    expect(returned / (spins * 5)).toBeCloseTo(stats.rtp, 1);
+    let sum = 0;
+    let sumOfSquares = 0;
+    for (let i = 0; i < spins; i++) {
+      const returned = resolveSpin({ bet: 5 }, rng).win / 5;
+      sum += returned;
+      sumOfSquares += returned * returned;
+    }
+    const mean = sum / spins;
+    const standardError = Math.sqrt((sumOfSquares / spins - mean * mean) / spins);
+    expect(Math.abs(mean - stats.rtp)).toBeLessThan(4 * standardError);
   });
 });
 

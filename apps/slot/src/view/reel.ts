@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 import { Container, Sprite, type Texture } from 'pixi.js';
 import type { SymbolId } from '../logic/config';
+import { mod } from '../logic/evaluate';
 
 /** Symbols per second at full speed. */
 export const SPIN_SPEED = 22;
@@ -8,8 +9,6 @@ export const SPIN_SPEED = 22;
 const LANDING_OVERSHOOT = 1.3;
 /** Whole symbols the reel still travels after a stop is requested. */
 const LANDING_DISTANCE = 3;
-
-const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 export interface ReelOptions {
   strip: readonly SymbolId[];
@@ -98,16 +97,19 @@ export class Reel extends Container {
     const duration = ((LANDING_OVERSHOOT + 3) * distance) / SPIN_SPEED;
 
     return new Promise((resolve) => {
+      // Also settle if the tween is killed (e.g. by start()), so callers never wait forever.
+      const settle = () => {
+        this.splice = null;
+        this.landingTween = null;
+        this.scroll = stop;
+        resolve();
+      };
       this.landingTween = gsap.to(this, {
         scroll: landing,
         duration: quick ? Math.min(duration, 0.28) : duration,
         ease: `back.out(${LANDING_OVERSHOOT})`,
-        onComplete: () => {
-          this.splice = null;
-          this.landingTween = null;
-          this.scroll = stop;
-          resolve();
-        },
+        onComplete: settle,
+        onInterrupt: settle,
       });
     });
   }
