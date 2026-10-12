@@ -1,28 +1,61 @@
-import { createGame } from '@lab/core';
-import { Graphics } from 'pixi.js';
+import type { FloorHandle } from './floor/start';
 
-// Placeholder backdrop: drifting neon dots. The Casino Floor replaces this in Phase 3.
-const stage = document.getElementById('stage');
+/**
+ * Two ways in: the arcade (the Pixi Casino Floor) and a plain classic list that is always in the
+ * page for search engines, link previews and screen readers. Reduced-motion users get the classic
+ * view by default; the choice is remembered.
+ */
+type View = 'arcade' | 'classic';
+
+const VIEW_KEY = 'lab:hub-view';
+const stage = document.getElementById('stage')!;
+const toggle = document.getElementById('view-toggle') as HTMLButtonElement;
+const contact = document.getElementById('contact') as HTMLDialogElement;
+
+const savedView = (): View | null => {
+  try {
+    const value = localStorage.getItem(VIEW_KEY);
+    return value === 'arcade' || value === 'classic' ? value : null;
+  } catch {
+    return null;
+  }
+};
+
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const requested = new URLSearchParams(window.location.search).get('view');
+let view: View =
+  requested === 'classic' || requested === 'arcade'
+    ? requested
+    : (savedView() ?? (reducedMotion ? 'classic' : 'arcade'));
 
-if (stage && !reducedMotion) {
-  const { app, root } = await createGame({ parent: stage, designWidth: 1280, designHeight: 720 });
-  const colors = [0xff3ea5, 0x3ef0ff, 0xffd23e];
+let floor: Promise<FloorHandle> | null = null;
 
-  const dots = Array.from({ length: 40 }, (_, i) => {
-    const dot = new Graphics().circle(0, 0, 2 + Math.random() * 4).fill({
-      color: colors[i % colors.length],
-      alpha: 0.5,
-    });
-    dot.position.set(Math.random() * 1280, Math.random() * 720);
-    root.addChild(dot);
-    return { dot, speed: 0.2 + Math.random() * 0.6 };
-  });
+const openContact = () => contact.showModal();
 
-  app.ticker.add((ticker) => {
-    for (const { dot, speed } of dots) {
-      dot.y -= speed * ticker.deltaTime;
-      if (dot.y < -10) dot.y = 730;
-    }
-  });
+async function apply(next: View) {
+  view = next;
+  document.body.classList.toggle('arcade', view === 'arcade');
+  toggle.textContent = view === 'arcade' ? 'Classic view' : 'Arcade view';
+  toggle.setAttribute('aria-pressed', String(view === 'classic'));
+  if (view === 'arcade') {
+    // Pixi and the floor are only downloaded when the arcade is actually shown.
+    floor ??= import('./floor/start').then(({ startFloor }) => startFloor(stage, openContact));
+    (await floor).resume();
+  } else if (floor) {
+    (await floor).pause();
+  }
 }
+
+toggle.addEventListener('click', () => {
+  const next: View = view === 'arcade' ? 'classic' : 'arcade';
+  try {
+    localStorage.setItem(VIEW_KEY, next);
+  } catch {
+    // Not remembering the choice is fine.
+  }
+  void apply(next);
+});
+document.getElementById('contact-open')?.addEventListener('click', openContact);
+contact.querySelector('[data-close]')?.addEventListener('click', () => contact.close());
+
+void apply(view);

@@ -3,39 +3,96 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>iGaming Canvas Lab</title>
+    <title>iGaming Canvas Lab · PixiJS casino game demos</title>
     <meta
       name="description"
-      content="PixiJS v8 + TypeScript casino game demos: slot, spin wheel, scratch card, crash and a bonus round."
+      content="Five casino games built with PixiJS v8 and TypeScript (slot, prize wheel, scratch card, crash and a bonus round) behind an arcade landing page."
     />
+    <meta name="theme-color" content="#0b0b14" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="iGaming Canvas Lab" />
+    <meta
+      property="og:description"
+      content="Five PixiJS v8 casino games with server-decided outcomes, tested maths and mobile layouts."
+    />
+    <meta property="og:url" content="https://igaming-canvas-lab.vercel.app/" />
+    <meta name="twitter:card" content="summary" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="stage" aria-hidden="true"></div>
-    <main>
+
+    <main id="classic">
       <h1>iGaming Canvas Lab</h1>
-      <p class="lede">Five small casino games built with PixiJS v8 and TypeScript.</p>
+      <p class="lede">
+        Five casino games built with PixiJS v8 and TypeScript. Every round is decided by a (mock)
+        server and only animated by the client, and the maths is unit-tested.
+      </p>
       <ul class="games">
         <li>
-          <a href="/slot/"><span>Mini Slot Machine</span><em>Play →</em></a>
+          <a href="/slot/">
+            <span
+              ><strong>Mini Slot</strong><small>Masked reels, reel splicing, 96.6% RTP</small></span
+            >
+            <em>Play →</em>
+          </a>
         </li>
         <li>
-          <a href="/wheel/"><span>Lucky Spin Wheel</span><em>Play →</em></a>
+          <a href="/wheel/">
+            <span
+              ><strong>Lucky Wheel</strong
+              ><small>Weighted outcomes, velocity-matched custom ease</small></span
+            >
+            <em>Play →</em>
+          </a>
         </li>
         <li>
-          <a href="/scratch/"><span>Scratch Card</span><em>Play →</em></a>
+          <a href="/scratch/">
+            <span
+              ><strong>Scratch Card</strong
+              ><small>RenderTexture brush, coverage grid, confetti</small></span
+            >
+            <em>Play →</em>
+          </a>
         </li>
         <li>
-          <a href="/crash/"><span>Crash Multiplier</span><em>Play →</em></a>
+          <a href="/crash/">
+            <span
+              ><strong>Crash</strong
+              ><small>Real-time curve, server-timed cash-out race</small></span
+            >
+            <em>Play →</em>
+          </a>
         </li>
         <li>
-          <a href="/bonus/"><span>Bonus Round</span><em>Play →</em></a>
+          <a href="/bonus/">
+            <span
+              ><strong>Bonus Round</strong
+              ><small>Rigged mascot, coin particles, BIG/MEGA/EPIC roll-up</small></span
+            >
+            <em>Play →</em>
+          </a>
         </li>
       </ul>
       <p class="links">
         <a href="https://github.com/mikegauci/igaming-canvas-lab">Source on GitHub</a>
+        <span aria-hidden="true">·</span>
+        <button id="contact-open" type="button" class="link">Contact</button>
       </p>
     </main>
+
+    <button id="view-toggle" type="button" class="view-toggle">Classic view</button>
+
+    <dialog id="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Let's talk</h2>
+      <p>I build HTML5 casino games with PixiJS, TypeScript and GSAP.</p>
+      <ul>
+        <li><a href="https://github.com/mikegauci">GitHub: @mikegauci</a></li>
+        <li><a href="https://github.com/mikegauci/igaming-canvas-lab">This project's source</a></li>
+      </ul>
+      <button type="button" data-close>Close</button>
+    </dialog>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
