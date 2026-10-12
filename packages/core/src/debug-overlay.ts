@@ -45,7 +45,7 @@ export function attachDebugOverlay(app: Application): () => void {
   panel.setAttribute('aria-hidden', 'true');
   Object.assign(panel.style, {
     position: 'fixed',
-    top: '8px',
+    bottom: '8px',
     left: '8px',
     zIndex: '9999',
     padding: '6px 8px',
