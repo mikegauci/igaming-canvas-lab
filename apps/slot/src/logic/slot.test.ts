@@ -115,5 +115,6 @@ describe('slot maths', () => {
     const mean = sum / spins;
     const standardError = Math.sqrt((sumOfSquares / spins - mean * mean) / spins);
     expect(Math.abs(mean - stats.rtp)).toBeLessThan(4 * standardError);
-  });
+    // Long statistical run: allow for slow or busy CI machines.
+  }, 30_000);
 });

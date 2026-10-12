@@ -100,7 +100,7 @@ export function createSymbolTextures(renderer: Renderer): Record<SymbolId, Textu
     const texture = renderer.generateTexture({
       target: art,
       frame,
-      resolution: 2,
+      resolution: renderer.resolution,
       antialias: true,
     });
     art.destroy({ children: true });

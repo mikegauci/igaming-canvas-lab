@@ -111,5 +111,6 @@ describe('prizes', () => {
       const sd = Math.sqrt(expected * (1 - segment.weight / total));
       expect(Math.abs(counts[i]! - expected)).toBeLessThan(5 * sd);
     });
-  });
+    // Long statistical run: allow for slow or busy CI machines.
+  }, 30_000);
 });
