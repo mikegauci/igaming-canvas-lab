@@ -209,6 +209,7 @@ export class ScratchScene extends Scene {
       this.hud.say('No match this time — try another card');
     } else {
       this.card.highlight(winningCells(outcome.cells));
+      this.hud.unlock('scratch-match');
       this.sounds.play('win');
       this.hud.say(`THREE ×${outcome.prize} — WIN ${formatCredits(win)}!`, colors.gold);
       this.confetti.burst({

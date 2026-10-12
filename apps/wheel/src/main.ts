@@ -12,6 +12,13 @@ const game = await createGame({
 
 const sounds = new SoundManager();
 sounds.synth({
+  unlock: [784, 1175, 1568].map((freq, i) => ({
+    freq,
+    duration: 0.16,
+    delay: i * 0.07,
+    wave: 'triangle' as const,
+    volume: 0.2,
+  })),
   click: [{ freq: 900, duration: 0.04, wave: 'square', volume: 0.12 }],
   tick: [{ freq: 2200, to: 1600, duration: 0.018, wave: 'square', volume: 0.07 }],
   spin: [{ freq: 180, to: 520, duration: 0.35, wave: 'triangle', volume: 0.25 }],

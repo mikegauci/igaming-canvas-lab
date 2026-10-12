@@ -183,6 +183,7 @@ export class BonusScene extends Scene {
     this.sounds.play('open');
     await chest.open(outcome.multiplier);
     this.round.send('opened');
+    this.hud.unlock('bonus-open');
 
     const tier = tierFor(win, bet);
     this.mascot.play('idle');

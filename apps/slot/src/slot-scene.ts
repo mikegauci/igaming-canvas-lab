@@ -145,6 +145,7 @@ export class SlotScene extends Scene {
     if (start.status === 'settled') {
       const { outcome, win, bet } = start.result;
       this.lastStops = outcome.stops;
+      this.hud.unlock('slot-spin');
       if (win > 0) {
         this.machine.showWins(outcome.wins);
         this.sounds.play('win');

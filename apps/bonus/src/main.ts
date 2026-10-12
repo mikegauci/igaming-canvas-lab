@@ -21,6 +21,13 @@ const game = await createGame({
 
 const sounds = new SoundManager();
 sounds.synth({
+  unlock: [784, 1175, 1568].map((freq, i) => ({
+    freq,
+    duration: 0.16,
+    delay: i * 0.07,
+    wave: 'triangle' as const,
+    volume: 0.2,
+  })),
   click: [{ freq: 900, duration: 0.04, wave: 'square', volume: 0.12 }],
   pick: [{ freq: 660, to: 990, duration: 0.12, wave: 'square', volume: 0.12 }],
   open: [

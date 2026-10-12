@@ -260,6 +260,7 @@ export class CrashScene extends Scene {
     this.won = true;
     this.round.send('paid');
     this.chart.markCashOut(multiplier);
+    if (multiplier >= 2) this.hud.unlock('crash-2x');
     this.chart.setCaption(`CASHED ${formatCredits(win)}`, colors.gold);
     this.sounds.play('cashout');
     this.hud.say(
