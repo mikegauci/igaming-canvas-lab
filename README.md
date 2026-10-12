@@ -6,7 +6,7 @@ Five small casino-style games built with **PixiJS v8 + TypeScript**, plus a play
 | ---------------------------------------------------------------- | ------- | --------------------------------------------------------------- |
 | [Mini Slot Machine](https://igaming-canvas-lab.vercel.app/slot/) | Live    | Masked reel strips, ticker-driven spin, server-decided outcomes |
 | [Lucky Spin Wheel](https://igaming-canvas-lab.vercel.app/wheel/) | Live    | Rotation tweens to a predetermined segment, custom easing       |
-| Scratch Card                                                     | Planned | RenderTexture erase brush, reveal % detection, touch            |
+| [Scratch Card](https://igaming-canvas-lab.vercel.app/scratch/)   | Live    | RenderTexture erase brush, reveal % detection, touch            |
 | Crash Multiplier                                                 | Planned | Real-time game loop, state machine, cash-out timing             |
 | Bonus Round                                                      | Planned | Spine animation, particles, big-win sequence                    |
 
@@ -64,6 +64,22 @@ A 12-segment prize wheel. Space spins, and pressing it again makes the wheel lan
   rotation each frame and kick the pointer with an elastic spring, plus a throttled tick sound.
 - **Cheap rendering.** The face (12 wedges, labels and pegs) is baked into one texture, and the
   rim bulbs share one tinted texture. About 10 draw calls per frame.
+
+## Scratch Card (`apps/scratch`)
+
+A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
+
+- **RenderTexture scratching.** The prizes sit above a silver foil and are masked by a
+  `RenderTexture`. Each pointer move paints a round-capped stroke from the last point into it, so
+  fast swipes leave no gaps.
+- **Coverage without GPU readback.** The same strokes are stamped into a 48×48 `CoverageGrid` in
+  memory, which gives per-prize and whole-card coverage cheaply instead of reading pixels back
+  every frame. A prize counts as seen at 50%, and past 62% the rest wipes away on its own.
+- **Server-decided card.** The prize is drawn first (RTP 94%, a win on 1 card in 3.2). The card is
+  then laid out with exactly three of the winning symbol and no other triple, and tests check
+  thousands of layouts.
+- **Pooled confetti.** `Confetti` in `@lab/core` is a `ParticleContainer` of 400 pre-allocated
+  quads (one draw call) recycled across bursts, also used for foil flakes while scratching.
 
 ## Development
 
