@@ -65,7 +65,7 @@ function bake(renderer: Renderer, art: Container, frame: Rectangle): Texture {
   const texture = renderer.generateTexture({
     target: wrapper,
     frame,
-    resolution: 2,
+    resolution: renderer.resolution,
     antialias: true,
   });
   wrapper.destroy({ children: true });
@@ -125,10 +125,14 @@ export class ScratchCard extends Container {
   private readonly tiles: Sprite[];
   private readonly glows: Graphics[];
   private readonly symbolTextures: Record<CardSymbol, Texture>;
+  private readonly foilTexture: Texture;
   private readonly revealTexture: RenderTexture;
   private readonly brush = new Graphics();
   private readonly emptyStage = new Container();
   private last: Point | null = null;
+  /** The one pointer allowed to scratch; other fingers are ignored until it lifts. */
+  private pointerId: number | null = null;
+  private wipe: gsap.core.Tween | null = null;
   private _enabled = false;
 
   constructor(renderer: Renderer) {
@@ -154,7 +158,8 @@ export class ScratchCard extends Container {
       }),
     ) as Record<CardSymbol, Texture>;
 
-    const foil = new Sprite(bake(renderer, drawFoil(), new Rectangle(0, 0, AREA, AREA)));
+    this.foilTexture = bake(renderer, drawFoil(), new Rectangle(0, 0, AREA, AREA));
+    const foil = new Sprite(this.foilTexture);
     const paper = new Graphics().roundRect(0, 0, AREA, AREA, 14).fill(0xfff6e0);
     this.glows = Array.from({ length: CELLS }, (_, i) => {
       const { x, y } = cellRect(i);
@@ -184,8 +189,9 @@ export class ScratchCard extends Container {
     this.area.hitArea = new Rectangle(0, 0, AREA, AREA);
     this.area.on('pointerdown', (e) => this.startStroke(e));
     this.area.on('globalpointermove', (e) => this.continueStroke(e));
-    this.area.on('pointerup', () => (this.last = null));
-    this.area.on('pointerupoutside', () => (this.last = null));
+    this.area.on('pointerup', (e) => this.endStroke(e.pointerId));
+    this.area.on('pointerupoutside', (e) => this.endStroke(e.pointerId));
+    this.area.on('pointercancel', (e) => this.endStroke(e.pointerId));
 
     this.addChild(frame, heading, this.area);
   }
@@ -199,7 +205,7 @@ export class ScratchCard extends Container {
     this._enabled = value;
     this.area.eventMode = value ? 'static' : 'none';
     this.area.cursor = value ? 'pointer' : 'default';
-    if (!value) this.last = null;
+    if (!value) this.endStroke(this.pointerId);
   }
 
   /** Covers the card again and puts these symbols under the foil. */
@@ -221,15 +227,18 @@ export class ScratchCard extends Container {
     const wipe = { radius: 0 };
     const center = AREA / 2;
     return new Promise((resolve) => {
-      gsap.to(wipe, {
+      this.wipe = gsap.to(wipe, {
         radius: AREA * 0.75,
         duration,
         ease: 'power2.in',
         onUpdate: () => this.paint(center, center, center, center, wipe.radius),
         onComplete: () => {
+          this.wipe = null;
           this.grid.stamp(center, center, center, center, AREA);
           resolve();
         },
+        // Killed by destroy(): stop painting, but don't leave the caller waiting.
+        onInterrupt: () => resolve(),
       });
     });
   }
@@ -260,24 +269,41 @@ export class ScratchCard extends Container {
   }
 
   override destroy(...args: Parameters<Container['destroy']>): void {
+    this.wipe?.kill();
     this.clearHighlight();
-    this.revealTexture.destroy(true);
-    this.brush.destroy();
     super.destroy(...args);
+    // Textures baked or rendered here are owned here; display-object destroy doesn't free them.
+    this.revealTexture.destroy(true);
+    this.foilTexture.destroy(true);
+    Object.values(this.symbolTextures).forEach((texture) => texture.destroy(true));
+    this.brush.destroy();
   }
 
   private startStroke(event: FederatedPointerEvent) {
-    if (!this._enabled) return;
+    if (!this._enabled || this.pointerId !== null) return;
+    this.pointerId = event.pointerId;
     const point = this.area.toLocal(event.global);
     this.last = point;
     this.scratch(point, point);
   }
 
   private continueStroke(event: FederatedPointerEvent) {
-    if (!this._enabled || !this.last) return;
+    if (!this._enabled || !this.last || event.pointerId !== this.pointerId) return;
+    // Released outside the window, where no pointerup reaches us: stop instead of scratching
+    // on hover when the mouse comes back.
+    if (event.pointerType === 'mouse' && event.buttons === 0) {
+      this.endStroke(event.pointerId);
+      return;
+    }
     const point = this.area.toLocal(event.global);
     this.scratch(this.last, point);
     this.last = point;
+  }
+
+  private endStroke(pointerId: number | null) {
+    if (pointerId !== this.pointerId) return;
+    this.pointerId = null;
+    this.last = null;
   }
 
   private scratch(from: Point, to: Point) {

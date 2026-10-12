@@ -67,6 +67,26 @@ describe('resolveCard', () => {
     }
   });
 
+  it('draws each prize as often as its weight says', () => {
+    const rng = createRng(12);
+    const cards = 100_000;
+    const counts = new Map<CardSymbol | null, number>();
+    for (let i = 0; i < cards; i++) {
+      const { prize } = resolveCard({ bet: 1 }, rng).outcome;
+      counts.set(prize, (counts.get(prize) ?? 0) + 1);
+    }
+    const total = PRIZE_WEIGHTS.reduce((sum, p) => sum + p.weight, 0);
+    for (const { prize, weight } of PRIZE_WEIGHTS) {
+      const p = weight / total;
+      const expected = cards * p;
+      // Within 5 standard deviations of a binomial count.
+      expect(Math.abs((counts.get(prize) ?? 0) - expected)).toBeLessThan(
+        5 * Math.sqrt(cards * p * (1 - p)),
+      );
+    }
+    // Long statistical run: allow for slow or busy CI machines.
+  }, 30_000);
+
   it('is deterministic for a seed', () => {
     const a = createRng(9);
     const b = createRng(9);
