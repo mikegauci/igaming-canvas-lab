@@ -10,7 +10,7 @@ import {
   type Texture,
   type Ticker,
 } from 'pixi.js';
-import { createWheelEase } from '../logic/ease';
+import { createWheelEase, type WheelEase } from '../logic/ease';
 import {
   pegsPassed,
   segmentAtRotation,
@@ -117,12 +117,10 @@ export class PrizeWheel extends Container {
   private readonly bulbTexture: Texture;
   /** Free-spin speed (rad/s), driven by GSAP while spinning up. */
   private speed = 0;
-  /** Measured rad/s from the last frame, whoever is turning the wheel. */
-  private velocity = 0;
   private lastRotation = 0;
   private spinUp: Promise<void> = Promise.resolve();
   private landing: gsap.core.Tween | null = null;
-  private landingTo = 0;
+  private plan: { to: number; travel: number; duration: number; ease: WheelEase } | null = null;
   private target: { segment: number; offset: number } | null = null;
   private settleLanding: (() => void) | null = null;
   private hurried = false;
@@ -195,7 +193,6 @@ export class PrizeWheel extends Container {
     if (this.speed > 0) this.rotor.rotation += this.speed * seconds;
 
     const now = this.rotor.rotation;
-    if (seconds > 0) this.velocity = (now - this.lastRotation) / seconds;
     const forward = pegsPassed(this.lastRotation, now, COUNT);
     const backward = pegsPassed(now, this.lastRotation, COUNT);
     if (forward > 0) this.flickPointer(-1);
@@ -241,14 +238,14 @@ export class PrizeWheel extends Container {
 
   /**
    * Player pressed STOP. Re-plans the landing as a short, firm stop from the wheel's current
-   * speed (power 2 = constant braking). Never speeds the wheel up.
+   * speed (power 2 = constant braking). Never speeds up a wheel that is already landing.
    */
   hurry(): void {
     if (this.hurried) return;
     this.hurried = true;
     if (!this.landing) return; // not landing yet: land() will plan a short stop
     // Already in the final crawl: nothing to gain.
-    if (this.landingTo - this.rotor.rotation < HURRIED_TRAVEL + segmentWidth(COUNT)) return;
+    if (this.plan!.to - this.rotor.rotation < HURRIED_TRAVEL + segmentWidth(COUNT)) return;
     this.planLanding(HURRIED_TRAVEL, 2);
   }
 
@@ -259,10 +256,12 @@ export class PrizeWheel extends Container {
    */
   private planLanding(minTravel: number, power: number) {
     const { segment, offset } = this.target!;
+    // Mid-landing, carry on at exactly the current speed; from a free spin, use the spin speed
+    // (with a floor in case STOP came during the wind-up).
+    const speed = this.landing ? this.landingSpeed() : Math.max(this.speed, SPIN_SPEED * 0.4);
     // Detach the old landing so killing it doesn't count as the landing ending.
     this.landing?.eventCallback('onInterrupt', null);
     gsap.killTweensOf([this, this.rotor]);
-    const speed = Math.max(this.velocity, this.speed, SPIN_SPEED * 0.4);
     this.speed = 0;
 
     const from = this.rotor.rotation;
@@ -275,19 +274,33 @@ export class PrizeWheel extends Container {
     const finish = () => {
       this.landing = null;
       this.lightMode = 'idle';
+      this.plan = null;
       const settle = this.settleLanding;
       this.settleLanding = null;
       settle?.();
     };
-    this.landingTo = to;
+    const duration = (travel * ease.initialSlope) / speed;
+    this.plan = { to, travel, duration, ease };
     this.landing = gsap.to(this.rotor, {
       rotation: to,
-      duration: (travel * ease.initialSlope) / speed,
+      duration,
       ease,
       onComplete: finish,
       // Also settle if killed from outside (startSpin, destroy), so callers never hang.
       onInterrupt: finish,
     });
+  }
+
+  /**
+   * Current angular speed of the landing, read off the ease curve itself (travel × slope /
+   * duration). Exact, unlike a frame-to-frame estimate, which a slow frame can skew.
+   */
+  private landingSpeed(): number {
+    const { travel, duration, ease } = this.plan!;
+    const progress = this.landing!.progress();
+    const a = Math.max(0, progress - 1e-4);
+    const b = Math.min(1, progress + 1e-4);
+    return (travel * (ease(b) - ease(a))) / (b - a) / duration;
   }
 
   /** Segment currently under the pointer. */
