@@ -16,8 +16,10 @@ export interface GameHudOptions {
   sounds: SoundManager;
   /** Label of the main action button (SPIN, BUY…). */
   actionLabel: string;
-  /** Diameter of the main action button. */
+  /** Height of the main action button (and its width, unless `actionWidth` is set). */
   actionSize?: number;
+  /** Makes the action button a pill this wide, for longer labels like CASH OUT. */
+  actionWidth?: number;
   betCaption?: string;
   /** Screen-reader names for the bet buttons. */
   betTitles?: readonly [lower: string, raise: string];
@@ -63,6 +65,7 @@ export class GameHud extends Container {
     sounds,
     actionLabel,
     actionSize = 140,
+    actionWidth = actionSize,
     betCaption = 'BET',
     betTitles = ['Lower bet', 'Raise bet'],
     panelWidth = 520,
@@ -82,7 +85,7 @@ export class GameHud extends Container {
     this.action = new Button({
       label: actionLabel,
       shortcut: 'Space',
-      width: actionSize,
+      width: actionWidth,
       height: actionSize,
       fontSize: Math.round(actionSize * 0.22),
     });
