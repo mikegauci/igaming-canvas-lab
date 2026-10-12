@@ -2,7 +2,6 @@ import { createRng } from '@lab/core/logic';
 import { describe, expect, it } from 'vitest';
 import { PAYTABLE, REEL_STRIPS, type SymbolId } from './config';
 import { evaluate, gridAt, resolveSpin, totalWin, type Grid } from './evaluate';
-import { countUpSeconds } from './presentation';
 import { exactStats } from './stats';
 
 /** Builds a grid from rows as you'd see them on screen (row-major), returning grid[reel][row]. */
@@ -116,13 +115,5 @@ describe('slot maths', () => {
     const mean = sum / spins;
     const standardError = Math.sqrt((sumOfSquares / spins - mean * mean) / spins);
     expect(Math.abs(mean - stats.rtp)).toBeLessThan(4 * standardError);
-  });
-});
-
-describe('countUpSeconds', () => {
-  it('grows with the win multiplier and is capped at 3 s', () => {
-    expect(countUpSeconds(1)).toBeCloseTo(0.95);
-    expect(countUpSeconds(10)).toBeGreaterThan(countUpSeconds(2));
-    expect(countUpSeconds(160)).toBe(3);
   });
 });

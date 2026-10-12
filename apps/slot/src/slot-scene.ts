@@ -2,6 +2,7 @@ import {
   BalancePanel,
   Button,
   colors,
+  countUpSeconds,
   formatCredits,
   Label,
   MuteButton,
@@ -17,7 +18,6 @@ import {
 import type { Texture, Ticker } from 'pixi.js';
 import { REEL_STRIPS, type SymbolId } from './logic/config';
 import type { SpinOutcome, SpinRequest } from './logic/evaluate';
-import { countUpSeconds } from './logic/presentation';
 import type { SlotStats } from './logic/stats';
 import { PaytablePanel } from './view/paytable';
 import { SlotMachine } from './view/slot-machine';
