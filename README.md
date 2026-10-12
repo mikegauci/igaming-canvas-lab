@@ -37,6 +37,9 @@ pnpm typecheck && pnpm lint
 pnpm build        # builds every app into dist/
 ```
 
+URL flags on any game: `?debug=1` shows FPS, draw calls and node count; `?seed=123` replays the
+same sequence of rounds.
+
 ## License
 
 MIT. Third-party assets are listed in [CREDITS.md](CREDITS.md).
