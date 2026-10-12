@@ -66,6 +66,7 @@ export class Confetti extends ParticleContainer {
       this.pieces.push(piece);
       this.free.push(piece);
     }
+    this.renderable = false;
   }
 
   /** Pieces currently flying. */
@@ -115,6 +116,7 @@ export class Confetti extends ParticleContainer {
       particle.alpha = 1;
       this.live.add(piece);
     }
+    this.renderable = this.live.size > 0;
   }
 
   /** Advances the simulation. (ParticleContainer already has an update() for its buffers.) */
@@ -142,6 +144,8 @@ export class Confetti extends ParticleContainer {
       particle.scaleY = piece.height * Math.abs(Math.cos(piece.flutter));
       particle.alpha = Math.min(1, (piece.life - piece.age) / FADE_SECONDS);
     }
+    // Nothing flying: skip packing and uploading the idle pool every frame.
+    this.renderable = this.live.size > 0;
   }
 
   reset(): void {
@@ -150,5 +154,6 @@ export class Confetti extends ParticleContainer {
       this.free.push(piece);
     }
     this.live.clear();
+    this.renderable = false;
   }
 }

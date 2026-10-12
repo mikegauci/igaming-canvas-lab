@@ -1,3 +1,4 @@
+import '@lab/core/game.css';
 import { createGame, MockOutcomeServer, seedFromQuery, SoundManager, Wallet } from '@lab/core';
 import { BET_LEVELS, resolveCard } from './logic/card';
 import { ScratchScene } from './scratch-scene';

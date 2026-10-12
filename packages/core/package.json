@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     ".": "./src/index.ts",
-    "./logic": "./src/logic.ts"
+    "./logic": "./src/logic.ts",
+    "./game.css": "./src/game.css"
   },
   "scripts": {
     "typecheck": "tsc -p ."

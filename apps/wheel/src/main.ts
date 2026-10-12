@@ -1,3 +1,4 @@
+import '@lab/core/game.css';
 import { createGame, MockOutcomeServer, seedFromQuery, SoundManager, Wallet } from '@lab/core';
 import { BET_LEVELS, resolveSpin } from './logic/prizes';
 import { WheelScene } from './wheel-scene';
