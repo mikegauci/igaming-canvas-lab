@@ -33,6 +33,18 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4(vite@8.3.4)
 
+  apps/bonus:
+    dependencies:
+      '@lab/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi.js:
+        specifier: ^8.22.0
+        version: 8.22.0
+
   apps/crash:
     dependencies:
       '@lab/core':
