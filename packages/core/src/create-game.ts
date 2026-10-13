@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, RendererType, type WebGLRenderer } from 'pixi.js';
 import { attachDebugOverlay } from './debug-overlay';
 import { IdleThrottle } from './idle-throttle';
 import { SceneManager, type Viewport } from './scene';
@@ -118,6 +118,37 @@ export async function createGame(options: GameOptions): Promise<Game> {
 
   let detachDebug = debug ? attachDebugOverlay(app, debugInfo) : undefined;
 
+  const destroy = () => {
+    window.removeEventListener('pagehide', onPageHide);
+    document.removeEventListener('visibilitychange', onVisibility);
+    for (const type of inputEvents) window.removeEventListener(type, onInput);
+    detachDebug?.();
+    detachDebug = undefined;
+    app.destroy(true, { children: true });
+  };
+
+  // Every page here is a full navigation, and the back-forward cache keeps a page it leaves alive,
+  // GPU memory and all. On iOS (every browser there is WebKit) the hub, a game and the hub again
+  // then share one tab's memory, and the tab is killed ("Can't open this page"). So give the GPU
+  // back as the page goes: lose the context outright (that frees it now, not at the next GC) and
+  // tear the app down. A page restored from the cache then has nothing to draw with, so reload it;
+  // that also picks up credits and badges that changed on the page in between.
+  const onPageHide = () => {
+    app.ticker.stop();
+    try {
+      if (app.renderer.type === RendererType.WEBGL) {
+        (app.renderer as WebGLRenderer).gl.getExtension('WEBGL_lose_context')?.loseContext();
+      }
+      destroy();
+    } catch {
+      // Half torn down is fine: the page is going, and comes back only through the reload below.
+    }
+  };
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) window.location.reload();
+  });
+
   return {
     app,
     root,
@@ -136,11 +167,6 @@ export async function createGame(options: GameOptions): Promise<Game> {
         detachDebug = undefined;
       }
     },
-    destroy() {
-      document.removeEventListener('visibilitychange', onVisibility);
-      for (const type of inputEvents) window.removeEventListener(type, onInput);
-      detachDebug?.();
-      app.destroy(true, { children: true });
-    },
+    destroy,
   };
 }
