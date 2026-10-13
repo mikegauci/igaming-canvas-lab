@@ -108,7 +108,7 @@ CI (GitHub Actions) runs typecheck, lint, tests and the full build on every push
 
 | Flag                         | Where    | Does                                                       |
 | ---------------------------- | -------- | ---------------------------------------------------------- |
-| `?debug=1`                   | any page | FPS, draw calls and node count overlay                     |
+| `?debug=1`                   | any page | FPS, draw calls and node count overlay (hub: pulse button) |
 | `?quality=high\|medium\|low` | hub      | pins the floor's quality tier instead of auto-detecting it |
 | `?seed=123`                  | any game | replays the same sequence of rounds                        |
 | `?demo=big\|mega\|epic`      | bonus    | every pick lands that win tier (says so on screen)         |
@@ -246,9 +246,11 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 - **Power-on intro.** On the first visit of a session, the horizon fades up, the title drops
   in, the script strikes like a real tube (a scripted stutter with a synthesized mains buzz),
   and the cabinets light up one by one before the HUD comes on. Any key or tap skips to the end.
-- **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
-  `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
-  floor, and earning all five lights the HIRE ME neon sign, which opens the contact panel at any time.
+- **Badges.** Each game awards one badge (shared through `@lab/core`'s `Achievements` in
+  localStorage, with an in-game toast), and the credits and badges show on the floor.
+- **Stats on tap.** The pulse button next to the speaker shows FPS, draw calls, node count,
+  renderer, quality tier and post-processing state, and remembers the choice. Both buttons are
+  neon tubes like the rest of the HUD. `?debug=1` still forces the panel on.
 - **Boot screen.** While Pixi downloads, a synthwave horizon in plain HTML and CSS (striped sun,
   scrolling perspective grid, chrome title, scanlines) shows real loading milestones, then
   switches off like a CRT into the floor's power-on intro. It costs no JavaScript beyond the hub's

@@ -51,8 +51,13 @@ export class MuteButton extends Container {
         .lineTo(10 * s, 7 * s)
         .stroke({ ...stroke, color: colors.neon });
     } else {
-      this.icon.arc(4 * s, 0, 9 * s, -0.75, 0.75).stroke(stroke);
-      this.icon.arc(4 * s, 0, 16 * s, -0.75, 0.75).stroke(stroke);
+      // Start each wave with moveTo, or the arc is joined to the speaker by a stray line.
+      for (const r of [9, 16]) {
+        this.icon
+          .moveTo(4 * s + Math.cos(-0.75) * r * s, Math.sin(-0.75) * r * s)
+          .arc(4 * s, 0, r * s, -0.75, 0.75)
+          .stroke(stroke);
+      }
     }
   }
 }

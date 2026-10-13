@@ -25,6 +25,8 @@ export interface Game {
   root: Container;
   scenes: SceneManager;
   readonly viewport: Viewport;
+  /** Whether the stats panel (FPS, draw calls…) is showing. */
+  debug: boolean;
   destroy(): void;
 }
 
@@ -81,7 +83,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   const onVisibility = () => (document.hidden ? app.ticker.stop() : app.ticker.start());
   document.addEventListener('visibilitychange', onVisibility);
 
-  const detachDebug = debug ? attachDebugOverlay(app, debugInfo) : undefined;
+  let detachDebug = debug ? attachDebugOverlay(app, debugInfo) : undefined;
 
   return {
     app,
@@ -89,6 +91,16 @@ export async function createGame(options: GameOptions): Promise<Game> {
     scenes,
     get viewport() {
       return viewport;
+    },
+    get debug() {
+      return detachDebug !== undefined;
+    },
+    set debug(on: boolean) {
+      if (on && !detachDebug) detachDebug = attachDebugOverlay(app, debugInfo);
+      if (!on && detachDebug) {
+        detachDebug();
+        detachDebug = undefined;
+      }
     },
     destroy() {
       document.removeEventListener('visibilitychange', onVisibility);
