@@ -1,4 +1,4 @@
-import { colors, fontFamily } from '@lab/core';
+import { arcadeFont, chromeFill, colors, metalFill } from '@lab/core';
 import { gsap } from 'gsap';
 import {
   Container,
@@ -33,15 +33,18 @@ const HURRIED_TRAVEL = 1.5;
 const OVERSHOOT_SEGMENTS = 0.25;
 const COUNT = SEGMENTS.length;
 
-/** Segment colours by multiplier; text is dark on the two light ones. */
-export const SEGMENT_STYLE: Record<number, { fill: number; text: number; label?: string }> = {
-  0: { fill: 0x232342, text: colors.muted, label: 'MISS' },
-  1: { fill: 0x3a3a8c, text: colors.text },
-  2: { fill: 0x7b2ff7, text: colors.text },
-  3: { fill: colors.neon, text: colors.text },
-  5: { fill: 0xff7a1a, text: colors.text },
-  10: { fill: colors.cyan, text: colors.bg },
-  50: { fill: colors.gold, text: colors.bg },
+/** Dark enamel segments with neon edges; jackpot and ×10 retain their bright faces. */
+export const SEGMENT_STYLE: Record<
+  number,
+  { fill: number; text: number; edge: number; label?: string }
+> = {
+  0: { fill: 0x141526, text: 0xb3b1ce, edge: 0x5c5b80, label: 'MISS' },
+  1: { fill: 0x23274e, text: 0xc7e2ff, edge: 0x8198ee },
+  2: { fill: 0x432066, text: 0xe9cbff, edge: 0xb66dff },
+  3: { fill: 0x7b2059, text: 0xffd8ed, edge: colors.neon },
+  5: { fill: 0x8b3b28, text: 0xffe2cb, edge: 0xff9557 },
+  10: { fill: 0x47d9ef, text: 0x11152e, edge: 0xc7fbff },
+  50: { fill: colors.gold, text: 0x39200d, edge: 0xfff1b0 },
 };
 
 export const segmentLabel = (multiplier: number): string =>
@@ -67,15 +70,23 @@ function drawWheelFace(): Container {
       .closePath()
       .fill(style.fill);
 
+    // Inset enamel ring: the metallic spokes remain visible between the prize windows.
+    g.moveTo(Math.sin(i * w + 0.025) * 105, -Math.cos(i * w + 0.025) * 105)
+      .arc(0, 0, RADIUS - 25, fromTop(i * w + 0.025), fromTop((i + 1) * w - 0.025))
+      .arc(0, 0, 105, fromTop((i + 1) * w - 0.025), fromTop(i * w + 0.025), true)
+      .closePath()
+      .stroke({ color: style.edge, width: 2, alpha: 0.7 });
+
     const center = (i + 0.5) * w;
     const label = new Text({
       text: segmentLabel(segment.multiplier),
       style: {
-        fontFamily,
-        fontSize: segment.multiplier === 0 ? 24 : 34,
+        fontFamily: arcadeFont,
+        fontSize: segment.multiplier === 0 ? 21 : 30,
         fontWeight: '900',
         fill: style.text,
         letterSpacing: 1,
+        dropShadow: { color: 0x070813, blur: 3, distance: 2, alpha: 0.45 },
       },
     });
     label.anchor.set(0.5);
@@ -89,12 +100,12 @@ function drawWheelFace(): Container {
     const a = i * w;
     g.moveTo(0, 0)
       .lineTo(Math.sin(a) * RADIUS, -Math.cos(a) * RADIUS)
-      .stroke({ color: colors.gold, width: 3, alpha: 0.85 });
+      .stroke({ color: 0xadb8d2, width: 3, alpha: 0.75 });
     g.circle(Math.sin(a) * (RADIUS - 10), -Math.cos(a) * (RADIUS - 10), 7)
-      .fill(colors.gold)
-      .stroke({ color: 0x8a6a12, width: 2 });
+      .fill(0xe8f3ff)
+      .stroke({ color: 0x58627f, width: 2 });
   }
-  g.circle(0, 0, RADIUS).stroke({ color: colors.gold, width: 6 });
+  g.circle(0, 0, RADIUS).stroke({ color: 0xc6cce0, width: 6 });
   g.circle(0, 0, RADIUS * 0.3).fill({ color: 0x000000, alpha: 0.25 });
 
   face.addChildAt(g, 0);
@@ -149,9 +160,14 @@ export class PrizeWheel extends Container {
     this.rotor.addChild(faceSprite, this.highlight);
 
     const rim = new Graphics()
-      .circle(0, 0, RADIUS + RIM)
-      .fill(colors.panel)
-      .stroke({ color: colors.neon, width: 4, alpha: 0.9 });
+      .circle(0, 3, RADIUS + RIM + 8)
+      .fill(0x050611)
+      .circle(0, 0, RADIUS + RIM + 4)
+      .fill(metalFill())
+      .stroke({ color: 0xabb7d4, width: 2 })
+      .circle(0, 0, RADIUS + RIM - 3)
+      .fill(0x101126)
+      .stroke({ color: colors.neon, width: 3, alpha: 0.9 });
     const glow = new Graphics()
       .circle(0, 0, RADIUS + RIM + 10)
       .stroke({ color: colors.neon, width: 14, alpha: 0.15 });
@@ -166,22 +182,43 @@ export class PrizeWheel extends Container {
     });
 
     const hub = new Graphics()
-      .circle(0, 0, 46)
-      .fill(colors.panel)
-      .stroke({ color: colors.gold, width: 5 })
-      .star(0, 0, 5, 26, 11)
-      .fill(colors.gold);
+      .circle(0, 4, 77)
+      .fill({ color: 0x030412, alpha: 0.65 })
+      .circle(0, 0, 75)
+      .fill(metalFill())
+      .stroke({ color: 0xd1dbef, width: 2 })
+      .circle(0, 0, 65)
+      .fill(0x171126)
+      .stroke({ color: colors.neon, width: 2 })
+      .circle(0, 0, 60)
+      .stroke({ color: colors.neon, width: 8, alpha: 0.13 })
+      .star(0, -8, 5, 37, 16)
+      .fill(chromeFill())
+      .stroke({ color: colors.gold, width: 1.5 });
+    const hubLabel = new Text({
+      text: 'LUCKY',
+      style: {
+        fontFamily: arcadeFont,
+        fontSize: 11,
+        fontWeight: '700',
+        fill: 0xe7f5ff,
+        letterSpacing: 2,
+      },
+    });
+    hubLabel.anchor.set(0.5);
+    hubLabel.position.set(0, 42);
 
     // Pointer hangs from a hinge above the wheel, tip pointing down into the pegs.
     this.pointer
       .poly([-22, 0, 22, 0, 0, 56])
-      .fill(colors.text)
-      .stroke({ color: colors.neon, width: 4, join: 'round' })
+      .fill(chromeFill())
+      .stroke({ color: colors.neon, width: 3, join: 'round' })
       .circle(0, 0, 10)
-      .fill(colors.neon);
+      .fill(metalFill())
+      .stroke({ color: 0xe7f5ff, width: 2 });
     this.pointer.position.set(0, -RADIUS - RIM - 4);
 
-    this.addChild(glow, rim, ...this.bulbs, this.rotor, hub, this.pointer);
+    this.addChild(glow, rim, ...this.bulbs, this.rotor, hub, hubLabel, this.pointer);
     // Rest with the pointer in the middle of a prize, not on a peg.
     this.rotor.rotation = -segmentCenter(0, COUNT);
     this.lastRotation = this.rotor.rotation;
@@ -358,7 +395,13 @@ export class PrizeWheel extends Container {
           : this.lightMode === 'win'
             ? this.lightStep % 2 === 0
             : (i + this.lightStep) % 2 === 0;
-      bulb.tint = on ? colors.gold : 0x5a4a1a;
+      bulb.tint = on
+        ? this.lightMode === 'win'
+          ? colors.gold
+          : i % 2
+            ? 0xff8bd0
+            : 0xa1f8ff
+        : 0x43405e;
       bulb.alpha = on ? 1 : 0.6;
     });
   }
@@ -367,6 +410,10 @@ export class PrizeWheel extends Container {
     const bulb = new Container({
       children: [
         new Graphics()
+          .circle(0, 0, 12)
+          .fill({ color: 0xffffff, alpha: 0.08 })
+          .circle(0, 0, 10)
+          .fill({ color: 0xffffff, alpha: 0.15 })
           .circle(0, 0, 8)
           .fill(0xffffff)
           .circle(-2.5, -2.5, 3)
@@ -375,7 +422,7 @@ export class PrizeWheel extends Container {
     });
     const texture = renderer.generateTexture({
       target: bulb,
-      frame: new Rectangle(-9, -9, 18, 18),
+      frame: new Rectangle(-13, -13, 26, 26),
       resolution: renderer.resolution,
       antialias: true,
     });

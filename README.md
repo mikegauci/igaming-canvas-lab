@@ -137,6 +137,9 @@ A 3×3, 5-line slot. Space spins, pressing it again slam-stops the reels, and �
 
 A 12-segment prize wheel. Space spins, and pressing it again makes the wheel land faster.
 
+- **Cosmic arcade cabinet.** Reuses the floor cabinet's star illustration behind a chrome
+  marquee, with metal trim, neon enamel prize segments and chasing cyan/pink rim lights.
+  Controls and exact prize odds flank the wheel in landscape and stack below it in portrait.
 - **Weighted, server-decided outcome.** The segments look equal, but the server picks one by
   weight, and also picks where inside it the pointer stops, so seeded replays are exact.
   `exactStats()` gives **RTP 95.6%**, with a 50× jackpot at 0.4%; the odds panel shows the same
