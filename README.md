@@ -92,11 +92,11 @@ because cash-outs are judged on the server's clock while the round is running.
 
 ### Testing
 
-`pnpm test` runs 105 tests over the pure logic, in milliseconds and without a browser:
+`pnpm test` runs 111 tests over the pure logic, in milliseconds and without a browser:
 
 - exact RTP by enumerating every reel stop, cross-checked against seeded simulations
 - prizes, segments and stops drawn as often as their weights say
-- the wheel's angle maths round trip, the ease's shape and starting slope
+- the wheel's angle maths round trip, forward-only landing, speed matching and pointer contact
 - the scratch card's layouts and coverage grid geometry
 - the crash latency race on fake timers: a cash-out that looks safe on screen loses if it
   reaches the server after the crash
@@ -146,12 +146,12 @@ A 12-segment prize wheel. Space spins, and pressing it again makes the wheel lan
   figures.
 - **Angle maths.** `targetRotation()` finds the forward rotation, at least a minimum distance away,
   that puts the chosen spot under the pointer. Tests check this round trip on 500 random cases.
-- **Custom ease.** `createWheelEase()` decelerates on a power curve, creeps just past the target
-  and settles back with a cosine, so the pointer sometimes slips over a peg and back. The tween
-  duration is chosen so the ease's starting speed equals the free-spin speed, so there's no jolt
-  when the result arrives.
-- **Pointer flicks.** Pegs crossing the pointer, forwards or backwards, are counted from the
-  rotation each frame and kick the pointer with an elastic spring, plus a throttled tick sound.
+- **Forward-only landing.** `createWheelEase()` decelerates on a power curve to the exact result
+  without overshooting or reversing across a sector. Landing duration matches the free-spin
+  speed, and STOP replans from the current speed without a jolt.
+- **Pointer contact.** The rotor and flap update on the same Pixi frame clock. The flap flexes
+  as a peg approaches and passes, then springs home, including when a slow frame skips the
+  contact window. Sector crossings trigger the throttled tick sound.
 - **Cheap rendering.** The face (12 wedges, labels and pegs) is baked into one texture, and the
   rim bulbs share one tinted texture. About 10 draw calls per frame.
 
@@ -159,6 +159,9 @@ A 12-segment prize wheel. Space spins, and pressing it again makes the wheel lan
 
 A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
 
+- **Diamond arcade cabinet.** Reuses the floor cabinet's crystal illustration behind a chrome
+  marquee, with a metal-framed card, holographic foil and dark enamel prize windows. Controls
+  and exact match-3 odds flank the card in landscape and stack below it in portrait.
 - **RenderTexture scratching.** The prizes sit above a silver foil and are masked by a
   `RenderTexture`. Each pointer move paints a round-capped stroke from the last point into it, so
   fast swipes leave no gaps.
@@ -176,6 +179,10 @@ A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
 Bet, watch the multiplier climb, and cash out before it crashes. Space bets and cashes out, and A
 cycles the auto cash-out target.
 
+- **Sunset launch cabinet.** Reuses the floor cabinet's rocket-and-sunset illustration behind a
+  chrome marquee. The chart sits in a metal bezel over a faint striped sun, with a chrome rocket
+  and neon-edged round history. Controls sit in a metal deck beside the chart in landscape and
+  below it in portrait.
 - **Server-authoritative timing.** `MockCrashServer` draws the crash point when the round starts
   and keeps it secret until it pushes the crash. Cash-outs are judged on the server's clock when
   the request arrives, so network delay counts against the player. The animation is never the
@@ -198,6 +205,10 @@ Pick one of three chests (click, or press 1, 2 or 3). Big prizes set off the cel
 `?demo=big`, `?demo=mega` or `?demo=epic` forces that tier so the sequence can be seen without
 waiting for a rare draw, and the screen says so.
 
+- **Royal fortune cabinet.** Reuses the floor cabinet's crown illustration behind a chrome
+  marquee. Lucky (now crowned) and purple-and-gold chests with amethyst locks stand on a
+  metal-framed stage with a neon grid floor, and the BIG/MEGA/EPIC banner uses chrome-style
+  Orbitron. Controls sit in a metal deck beside the stage in landscape and below it in portrait.
 - **Server-decided pick.** The pick is cosmetic: the server decides the prize, and what the
   other two chests held, when the chest is picked. RTP is 97%, a pick pays on 63% of tries, and a
   BIG WIN or better comes up 1 in 50.
@@ -219,8 +230,9 @@ The landing page is a game too: a synthwave arcade with one cabinet per game. No
 learn: hover (or use the arrow keys) to light a cabinet, and click (or press Enter) to zoom into
 its screen and open the game. On phones the row becomes a swipeable carousel with dots.
 
-- **Attract mode.** Each cabinet's screen loops a tiny preview of its game: spinning reels, a
-  coasting wheel, a foil wipe, a crash curve, a bouncing mascot.
+- **Attract mode.** Each cabinet's screen loops a tiny preview of its game, drawn to match the
+  game's own retrowave look: the slot's symbols on silver reels, the enamel prize wheel, a
+  holographic foil wipe, the crash curve over a striped sun, and crowned Lucky on the bonus stage.
 - **Cabinets drawn in code.** Gradient shells edged with a neon tube (glow, halo and a white-hot
   core), lit marquees with chasing bulbs, joysticks, buttons and coin doors, and a pool of light
   with tube reflections on the grid. The selected cabinet lifts, its bulbs chase faster and its
@@ -254,6 +266,11 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 - **Stats on tap.** The pulse button next to the speaker shows FPS, draw calls, node count,
   renderer, quality tier and post-processing state, and remembers the choice. Both buttons are
   neon tubes like the rest of the HUD. `?debug=1` still forces the panel on.
+- **Background soundtrack.** The lobby and all five games share a user-supplied 100 BPM track,
+  trimmed to 48 beats (28.8 seconds) with a 40 ms crossfade for looping. It loads after audio
+  unlocks on a click/tap or keypress. The music-note button toggles music, and the speaker toggles
+  sound effects independently; both choices are remembered. Music pauses in hidden tabs and retains its position across lobby/game navigation
+  in the same tab; page loads may leave a short gap while the next screen boots.
 - **Boot screen.** While Pixi downloads, a synthwave horizon in plain HTML and CSS (striped sun,
   scrolling perspective grid, chrome title, scanlines) shows real loading milestones, then
   switches off like a CRT into the floor's power-on intro. It costs no JavaScript beyond the hub's

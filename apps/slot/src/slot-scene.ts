@@ -110,6 +110,7 @@ export class SlotScene extends Scene {
       });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
       hud.mute.position.set(width - 54, 44);
+      hud.music.position.set(width - 122, 44);
     } else {
       hud.placeHeader(cx, 143);
       this.machine.position.set(cx - SlotMachine.WIDTH / 2, 238);
@@ -120,6 +121,7 @@ export class SlotScene extends Scene {
       hud.panel.position.set(cx - hud.panelWidth / 2, 906);
       this.paytable.position.set(cx - table.width / 2, 1014);
       hud.mute.position.set(width - 57, 51);
+      hud.music.position.set(width - 125, 51);
     }
     this.cabinet.arrange(viewport, this.machine.x, this.machine.y, SlotMachine.WIDTH);
   }

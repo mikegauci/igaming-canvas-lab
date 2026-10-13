@@ -20,8 +20,8 @@ import { Cabinet, CABINET_HEIGHT } from './cabinet';
 import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
 import { GAMES, type GameInfo } from './games';
-import { NeonIconButton, pulseGlyph, speakerGlyph } from './icon-button';
-import { NeonTitle, neonStyle, strike } from './neon';
+import { musicGlyph, NeonIconButton, pulseGlyph, speakerGlyph } from './icon-button';
+import { hudStyle, NeonTitle, strike } from './neon';
 import type { Quality, QualitySettings } from './quality';
 
 export interface FloorSceneOptions {
@@ -90,6 +90,7 @@ export class FloorScene extends Scene {
   private readonly badgesDone: Text;
   private readonly statsButton: NeonIconButton;
   private readonly mute: NeonIconButton;
+  private readonly music: NeonIconButton;
   private readonly dots = new Graphics();
   private readonly confetti: Confetti;
   private readonly crt = new CrtFilter();
@@ -98,7 +99,12 @@ export class FloorScene extends Scene {
   /** The switch-off flash when a game launches: the picture collapses to a line, then a dot. */
   private readonly flash = new Graphics();
   private readonly introLayer = new Container();
-  private viewport: Viewport = { width: 1280, height: 720, orientation: 'landscape' };
+  private viewport: Viewport = {
+    width: 1280,
+    height: 720,
+    orientation: 'landscape',
+    screen: { x: 0, y: 0, width: 1280, height: 720 },
+  };
   private selected = 0;
   private cameraX = 0;
   private cameraTarget = 0;
@@ -147,7 +153,7 @@ export class FloorScene extends Scene {
 
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
-    this.credits = new Text({ text: '', style: neonStyle(colors.gold, 18, { letterSpacing: 1 }) });
+    this.credits = new Text({ text: '', style: hudStyle(colors.gold, 18, { letterSpacing: 1 }) });
     this.credits.anchor.set(0, 0.5);
     const renderCredits = () => (this.credits.text = `CREDITS ${formatCredits(wallet.balance)}`);
     renderCredits();
@@ -155,7 +161,7 @@ export class FloorScene extends Scene {
 
     this.badgesDone = new Text({
       text: '★ ALL BADGES COLLECTED · THANKS FOR PLAYING ★',
-      style: neonStyle(0x7cff6b, 12, { letterSpacing: 1 }),
+      style: hudStyle(0x7cff6b, 12, { letterSpacing: 1 }),
     });
     this.badgesDone.anchor.set(0, 0.5);
     this.buildBadges(achievements);
@@ -168,11 +174,17 @@ export class FloorScene extends Scene {
       this.statsButton.lit = options.stats.on;
     });
     this.mute = new NeonIconButton(speakerGlyph, colors.cyan, (on) =>
-      on ? 'Mute sound' : 'Unmute sound',
+      on ? 'Mute sound effects' : 'Unmute sound effects',
     );
     this.mute.lit = !sounds.muted;
     this.mute.on('pointertap', () => sounds.toggle());
     this.subscriptions.push(sounds.onChange(() => (this.mute.lit = !sounds.muted)));
+    this.music = new NeonIconButton(musicGlyph, colors.neon, (on) =>
+      on ? 'Turn music off' : 'Turn music on',
+    );
+    this.music.lit = !sounds.musicMuted;
+    this.music.on('pointertap', () => sounds.toggleMusic());
+    this.subscriptions.push(sounds.onMusicChange(() => (this.music.lit = !sounds.musicMuted)));
     this.confetti = new Confetti(260, coinTexture);
 
     // Full-screen hit area so swipes work anywhere, not just on a cabinet.
@@ -223,6 +235,7 @@ export class FloorScene extends Scene {
       this.badgesDone,
       this.statsButton,
       this.mute,
+      this.music,
       this.caption,
       this.hint,
       this.dots,
@@ -272,10 +285,12 @@ export class FloorScene extends Scene {
       }
       this.statsButton.scale.set(1);
       this.mute.scale.set(1);
+      this.music.scale.set(1);
       this.credits.position.set(28, 36);
       this.badges.position.set(30, 76);
       this.placeBadgeExtras();
-      this.statsButton.position.set(width - 100, 44);
+      this.statsButton.position.set(width - 156, 44);
+      this.music.position.set(width - 100, 44);
       this.mute.position.set(width - 44, 44);
       this.caption.position.set(width / 2, height - 46);
       this.hint.position.set(width / 2, height - 18);
@@ -300,13 +315,15 @@ export class FloorScene extends Scene {
       this.badgesDone.scale.set(1.3);
       this.statsButton.scale.set(hud);
       this.mute.scale.set(hud);
+      this.music.scale.set(hud);
       this.credits.position.set(28, 160);
       this.badges.position.set(30, 212);
       this.placeBadgeExtras();
       // The buttons are 46 px across at scale 1; keep a gap of a third of that between them.
       const button = 23 * hud;
       this.mute.position.set(width - 24 - button, 192);
-      this.statsButton.position.set(width - 24 - button * 3 - 16, 192);
+      this.music.position.set(width - 24 - button * 3 - 16, 192);
+      this.statsButton.position.set(width - 24 - button * 5 - 32, 192);
       this.caption.position.set(width / 2, height - 150);
       this.hint.position.set(width / 2, height - 112);
       this.hint.text = 'SWIPE TO BROWSE · TAP TO PLAY';
@@ -630,6 +647,7 @@ export class FloorScene extends Scene {
       this.badgesDone,
       this.statsButton,
       this.mute,
+      this.music,
       this.caption,
       this.hint,
       this.dots,

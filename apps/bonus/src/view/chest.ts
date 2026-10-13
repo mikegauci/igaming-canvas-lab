@@ -1,13 +1,15 @@
-import { colors, fontFamily } from '@lab/core';
+import { arcadeFont, colors } from '@lab/core';
 import { gsap } from 'gsap';
 import { BitmapText, Container, Graphics } from 'pixi.js';
 
 export const CHEST_WIDTH = 170;
 export const CHEST_HEIGHT = 146;
 
-const WOOD = 0x7a3e1d;
-const WOOD_LIGHT = 0x8b4a22;
-const METAL = 0xb8901a;
+// Royal purple lacquer with gold bands and an amethyst lock, like the crown in the cabinet art.
+const LACQUER = 0x3b1a6b;
+const LACQUER_LIGHT = 0x4f2590;
+const METAL = 0xd9a520;
+const GEM = 0xb66dff;
 
 /** Colour for a prize label: rarer prizes get the brighter colours. */
 export const prizeColor = (multiplier: number): number =>
@@ -41,25 +43,32 @@ export class Chest extends Container {
   constructor(index: number) {
     super();
     const base = new Graphics()
+      // Neon underglow on the stage floor.
+      .ellipse(0, 2, 96, 14)
+      .fill({ color: colors.neon, alpha: 0.22 })
       .roundRect(-85, -100, 170, 100, 14)
-      .fill(WOOD)
+      .fill(LACQUER)
       .stroke({ color: colors.gold, width: 6 })
+      .roundRect(-78, -92, 156, 10, 5)
+      .fill({ color: 0xffffff, alpha: 0.08 })
       .rect(-62, -100, 14, 100)
       .fill(METAL)
       .rect(48, -100, 14, 100)
       .fill(METAL)
-      .roundRect(-16, -82, 32, 36, 6)
+      .roundRect(-18, -86, 36, 42, 7)
       .fill(colors.gold)
-      .circle(0, -68, 5)
-      .fill(0x2b1a0a)
-      .rect(-2, -66, 4, 10)
-      .fill(0x2b1a0a);
+      .stroke({ color: 0x8a5a12, width: 2 })
+      .poly([0, -80, 11, -66, 0, -52, -11, -66])
+      .fill(GEM)
+      .stroke({ color: 0x4a1a7a, width: 1.5 })
+      .poly([0, -80, 5, -66, 0, -71, -5, -66])
+      .fill({ color: 0xffffff, alpha: 0.45 });
     // Interior light, only visible once the lid is up.
     this.light.rect(-78, -104, 156, 10).fill(colors.gold);
     this.light.alpha = 0;
     const lidArt = new Graphics()
       .roundRect(-85, -46, 170, 46, 20)
-      .fill(WOOD_LIGHT)
+      .fill(LACQUER_LIGHT)
       .stroke({ color: colors.gold, width: 6 })
       .rect(-62, -44, 14, 44)
       .fill(METAL)
@@ -75,13 +84,13 @@ export class Chest extends Container {
 
     this.prize = new BitmapText({
       text: '',
-      style: { fontFamily, fontSize: 44, fontWeight: 'bold', fill: 0xffffff },
+      style: { fontFamily: arcadeFont, fontSize: 40, fontWeight: 'bold', fill: 0xffffff },
     });
     this.prize.anchor.set(0.5);
     this.prize.alpha = 0;
     this.hint = new BitmapText({
       text: `${index + 1}`,
-      style: { fontFamily, fontSize: 16, fontWeight: 'bold', fill: 0xffffff },
+      style: { fontFamily: arcadeFont, fontSize: 14, fontWeight: 'bold', fill: 0xffffff },
     });
     this.hint.anchor.set(0.5, 0);
     this.hint.position.set(0, 12);

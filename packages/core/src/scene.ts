@@ -1,11 +1,24 @@
 import { gsap } from 'gsap';
 import { Container, type Ticker } from 'pixi.js';
 
+/** A rectangle in design coordinates. */
+export interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** The design-space area a scene lays itself out in. Switches when the device rotates. */
 export interface Viewport {
   width: number;
   height: number;
   orientation: 'landscape' | 'portrait';
+  /**
+   * The whole window in design coordinates. It contains the design area and also covers the
+   * letterbox bars, so backgrounds and dimming layers drawn to it fill the screen at any size.
+   */
+  screen: Bounds;
 }
 
 /** A screen of the game (loading, play, bonus…). All hooks are optional. */

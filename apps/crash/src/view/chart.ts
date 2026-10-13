@@ -1,4 +1,12 @@
-import { colors, Confetti, fontFamily } from '@lab/core';
+import {
+  arcadeFont,
+  chromeFill,
+  colors,
+  Confetti,
+  fontFamily,
+  metalFill,
+  verticalGradient,
+} from '@lab/core';
 import {
   BitmapText,
   Container,
@@ -44,14 +52,17 @@ function bake(renderer: Renderer, art: Container, frame: Rectangle): Texture {
   return texture;
 }
 
-/** Rocket pointing along +x, centred on its middle. */
+/** Chrome rocket with red fins, like the cabinet art, pointing along +x and centred. */
 function drawRocket(): Container {
+  const fin = { color: 0x5a0f22, width: 1.5, join: 'round' as const };
   const g = new Graphics();
-  g.poly([-22, -14, -34, -26, -14, -12]).fill(colors.neon); // top fin
-  g.poly([-22, 14, -34, 26, -14, 12]).fill(colors.neon); // bottom fin
-  g.ellipse(0, 0, 32, 14).fill(colors.text);
-  g.poly([24, -10, 40, 0, 24, 10]).fill(colors.neon); // nose
-  g.circle(6, 0, 6).fill(colors.cyan).stroke({ color: 0x1fa3b3, width: 2 });
+  g.poly([-20, -12, -34, -27, -10, -12]).fill(CRASH_RED).stroke(fin); // top fin
+  g.poly([-20, 12, -34, 27, -10, 12]).fill(CRASH_RED).stroke(fin); // bottom fin
+  g.ellipse(0, 0, 32, 14).fill(chromeFill()).stroke({ color: 0x3a4466, width: 1.5 });
+  g.poly([24, -10, 41, 0, 24, 10]).fill(CRASH_RED).stroke(fin); // nose
+  g.circle(6, 0, 6.5).fill(0x0d1a3a).stroke({ color: CRASH_RED, width: 2 });
+  g.circle(6, 0, 4).fill(colors.cyan);
+  g.circle(4.5, -1.5, 1.5).fill(0xffffff);
   return g;
 }
 
@@ -75,6 +86,7 @@ interface Marker {
  */
 export class CrashChart extends Container {
   private readonly bg = new Graphics();
+  private readonly sunset = new Graphics();
   private readonly grid = new Graphics();
   private readonly area = new Graphics();
   private readonly curve = new Graphics();
@@ -131,9 +143,15 @@ export class CrashChart extends Container {
         text: '',
         style: { fontFamily, fontSize: size, fontWeight: 'bold', fill: 0xffffff },
       });
-    this.multiplier = label(96);
+    this.multiplier = new BitmapText({
+      text: '',
+      style: { fontFamily: arcadeFont, fontSize: 88, fontWeight: 'bold', fill: 0xffffff },
+    });
     this.multiplier.anchor.set(0.5);
-    this.caption = label(22);
+    this.caption = new BitmapText({
+      text: '',
+      style: { fontFamily: arcadeFont, fontSize: 20, fontWeight: 'bold', fill: 0xffffff },
+    });
     this.caption.anchor.set(0.5);
     this.caption.tint = colors.muted;
     this.yLabels = Array.from({ length: TICKS + 1 }, () => {
@@ -150,7 +168,15 @@ export class CrashChart extends Container {
     });
 
     const plot = new Container({
-      children: [...this.stars, this.area, this.curve, this.markerLayer, this.rocket, this.debris],
+      children: [
+        this.sunset,
+        ...this.stars,
+        this.area,
+        this.curve,
+        this.markerLayer,
+        this.rocket,
+        this.debris,
+      ],
     });
     plot.mask = this.plotMask;
     this.addChild(
@@ -174,11 +200,20 @@ export class CrashChart extends Container {
   setSize(width: number, height: number): void {
     this.chartWidth = width;
     this.chartHeight = height;
+    // Metal bezel around a dark neon-edged screen, like the wheel's rim.
     this.bg
       .clear()
-      .roundRect(0, 0, width, height, 20)
-      .fill(colors.panel)
-      .stroke({ color: colors.neon, width: 3, alpha: 0.6 });
+      .roundRect(-12, -8, width + 24, height + 22, 26)
+      .fill({ color: 0x050611, alpha: 0.85 })
+      .roundRect(-10, -10, width + 20, height + 20, 26)
+      .fill(metalFill())
+      .stroke({ color: 0xabb7d4, width: 2 })
+      .roundRect(0, 0, width, height, 18)
+      .fill(0x0b0a1f)
+      .stroke({ color: colors.neon, width: 3, alpha: 0.9 })
+      .roundRect(4, 4, width - 8, height - 8, 15)
+      .stroke({ color: colors.neon, width: 9, alpha: 0.13 });
+    this.drawSunset();
     this.plotMask.clear().rect(PAD.left, PAD.top, this.plotWidth, this.plotHeight).fill(0xffffff);
     this.stars.forEach((star) => {
       star.position.set(
@@ -297,6 +332,27 @@ export class CrashChart extends Container {
     this.textures.forEach((texture) => texture.destroy(true));
   }
 
+  /** A faint striped retrowave sun setting behind the plot, drawn once per size. */
+  private drawSunset() {
+    const radius = Math.min(this.plotWidth, this.plotHeight) * 0.55;
+    const cx = PAD.left + this.plotWidth / 2;
+    const baseY = PAD.top + this.plotHeight;
+    const g = this.sunset.clear();
+    g.circle(cx, baseY, radius).fill(
+      verticalGradient([
+        [0, '#ffd23e'],
+        [0.45, '#ff5fa8'],
+        [1, '#7b2ff7'],
+      ]),
+    );
+    // Gaps widen towards the horizon, like the cabinet art.
+    for (let i = 0; i < 7; i++) {
+      const y = baseY - radius * 0.55 + i * radius * 0.08;
+      g.rect(cx - radius, y, radius * 2, 2 + i * 1.6).fill(0x0b0a1f);
+    }
+    g.alpha = 0.22;
+  }
+
   private get plotWidth() {
     return this.chartWidth - PAD.left - PAD.right;
   }
@@ -380,6 +436,6 @@ export class CrashChart extends Container {
       label.text = `${value}s`;
       label.position.set(x, PAD.top + this.plotHeight + 10);
     });
-    g.stroke({ color: colors.text, width: 1, alpha: 0.08 });
+    g.stroke({ color: colors.cyan, width: 1, alpha: 0.12 });
   }
 }

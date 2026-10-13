@@ -7,7 +7,7 @@ export interface KeyValueStore {
 /** localStorage, but never throws (private mode, blocked site data, SSR). */
 export const localStore = (): KeyValueStore => webStore(() => window.localStorage);
 
-/** sessionStorage, but never throws: same reasons as localStore(). */
+/** sessionStorage, but never throws: same reasons as localStore(). Per tab, e.g. the music position. */
 export const sessionStore = (): KeyValueStore => webStore(() => window.sessionStorage);
 
 /** Even reading `window.localStorage` can throw when site data is blocked, hence the getter. */

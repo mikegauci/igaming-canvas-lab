@@ -111,6 +111,7 @@ export class WheelScene extends Scene {
       hud.placeControls(1060, 339, { stacked: true });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
       hud.mute.position.set(width - 54, 44);
+      hud.music.position.set(width - 122, 44);
     } else {
       hud.placeHeader(cx, 143);
       hud.message.position.set(cx, 212);
@@ -120,6 +121,7 @@ export class WheelScene extends Scene {
       hud.panel.position.set(cx - hud.panelWidth / 2, 956);
       this.odds.position.set(cx - table.width / 2, 1050);
       hud.mute.position.set(width - 57, 51);
+      hud.music.position.set(width - 125, 51);
     }
     this.cabinet.arrange(viewport, this.wheel.x, this.wheel.y);
   }

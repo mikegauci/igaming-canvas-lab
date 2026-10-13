@@ -79,6 +79,19 @@ export const speakerGlyph: Glyph = (g, on) => {
   }
 };
 
+/** Beamed music notes, with a slash when the soundtrack is off. */
+export const musicGlyph: Glyph = (g, on) => {
+  g.moveTo(-5, 8)
+    .lineTo(-5, -9)
+    .lineTo(11, -13)
+    .lineTo(11, 4)
+    .moveTo(-5, -4)
+    .lineTo(11, -8)
+    .ellipse(-9, 8, 4, 3)
+    .ellipse(7, 4, 4, 3);
+  if (!on) g.moveTo(-14, -14).lineTo(14, 14);
+};
+
 /** A heartbeat trace: the stats panel (FPS, draw calls, tier). */
 export const pulseGlyph: Glyph = (g) => {
   g.moveTo(-13, 1)
