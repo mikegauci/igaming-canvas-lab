@@ -179,6 +179,10 @@ A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
 Bet, watch the multiplier climb, and cash out before it crashes. Space bets and cashes out, and A
 cycles the auto cash-out target.
 
+- **Sunset launch cabinet.** Reuses the floor cabinet's rocket-and-sunset illustration behind a
+  chrome marquee. The chart sits in a metal bezel over a faint striped sun, with a chrome rocket
+  and neon-edged round history. Controls sit in a metal deck beside the chart in landscape and
+  below it in portrait.
 - **Server-authoritative timing.** `MockCrashServer` draws the crash point when the round starts
   and keeps it secret until it pushes the crash. Cash-outs are judged on the server's clock when
   the request arrives, so network delay counts against the player. The animation is never the
