@@ -61,7 +61,7 @@ describe('BackgroundMusic', () => {
     const track = music();
     await Promise.all([track.start(), track.start(), track.start()]);
     expect(fetchTrack).toHaveBeenCalledOnce();
-    expect(fetchTrack).toHaveBeenCalledWith(expect.stringContaining('icl-background-loop.wav'));
+    expect(fetchTrack).toHaveBeenCalledWith(expect.stringContaining('icl-background-loop.flac'));
     expect(context.decodeAudioData).toHaveBeenCalledTimes(1);
     expect(context.decodeAudioData).toHaveBeenCalledWith(trackBytes);
     expect(sources).toHaveLength(1);

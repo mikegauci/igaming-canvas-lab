@@ -8,7 +8,7 @@ were generated with OpenAI's image tool; Mini Slot reuses the Miami illustration
 and marquee, Lucky Wheel reuses the cosmic star illustration, Scratch Card the crystal one,
 Crash the rocket sunset and Bonus Round the crown. Sound effects are synthesized at startup by
 `renderWav()` in `@lab/core`. The shared background soundtrack uses the user-supplied
-`icl-bg-audio-file.mp3`, prepared as a looping WAV (see `packages/core/src/audio/README.md`).
+`icl-bg-audio-file.mp3`, prepared as a looping FLAC (see `packages/core/src/audio/README.md`).
 Every game uses Orbitron, and the Casino Floor uses both fonts below, self-hosted from Fontsource:
 
 | Font                                                   | Licence                   |
