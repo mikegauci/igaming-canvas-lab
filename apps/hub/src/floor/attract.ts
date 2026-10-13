@@ -24,7 +24,7 @@ class SlotAttract extends Container implements Attract {
     super();
     for (let i = 0; i < 3; i++) {
       const reel = new Graphics();
-      reel.x = 22 + i * 50;
+      reel.x = 12 + i * 50;
       this.reels.push(reel);
       this.addChild(reel);
     }
@@ -44,7 +44,7 @@ class SlotAttract extends Container implements Attract {
       }
     });
     const win = this.clock > 2 && Math.floor(this.clock * 8) % 2 === 0;
-    this.reels[0]!.rect(-12, 60, 150, 4).fill({ color: colors.gold, alpha: win ? 1 : 0 });
+    this.reels[0]!.rect(-12, 60, SCREEN_WIDTH, 4).fill({ color: colors.gold, alpha: win ? 1 : 0 });
   }
 }
 
