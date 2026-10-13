@@ -8,6 +8,8 @@ export interface GameInfo {
   path: string;
   color: number;
   badge: AchievementId;
+  /** Decorative print on the cabinet's lower front (also cropped for the marquee). */
+  art: string;
 }
 
 export const GAMES: readonly GameInfo[] = [
@@ -16,6 +18,7 @@ export const GAMES: readonly GameInfo[] = [
     title: 'MINI SLOT',
     caption: 'Slot machine: masked reels, reel splicing, server-decided outcomes',
     path: '/slot/',
+    art: '/art/cabinets/slot-front.webp',
     color: colors.neon,
     badge: 'slot-spin',
   },
@@ -24,6 +27,7 @@ export const GAMES: readonly GameInfo[] = [
     title: 'LUCKY WHEEL',
     caption: 'Prize wheel: weighted outcomes, velocity-matched custom ease',
     path: '/wheel/',
+    art: '/art/cabinets/wheel-front.webp',
     color: colors.gold,
     badge: 'wheel-win',
   },
@@ -32,6 +36,7 @@ export const GAMES: readonly GameInfo[] = [
     title: 'SCRATCH',
     caption: 'Scratch card: RenderTexture brush, coverage grid, confetti',
     path: '/scratch/',
+    art: '/art/cabinets/scratch-front.webp',
     color: colors.cyan,
     badge: 'scratch-match',
   },
@@ -40,6 +45,7 @@ export const GAMES: readonly GameInfo[] = [
     title: 'CRASH',
     caption: 'Crash: real-time curve, easing camera, server-timed cash-out race',
     path: '/crash/',
+    art: '/art/cabinets/crash-front.webp',
     color: 0xff3e5e,
     badge: 'crash-2x',
   },
@@ -48,6 +54,7 @@ export const GAMES: readonly GameInfo[] = [
     title: 'BONUS',
     caption: 'Bonus round: rigged mascot, coin particles, BIG/MEGA/EPIC roll-up',
     path: '/bonus/',
+    art: '/art/cabinets/bonus-front.webp',
     color: 0x7cff6b,
     badge: 'bonus-open',
   },
