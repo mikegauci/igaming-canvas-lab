@@ -4,7 +4,6 @@ import {
   Confetti,
   formatCredits,
   Label,
-  MuteButton,
   onKey,
   Scene,
   type Achievements,
@@ -19,7 +18,8 @@ import { Cabinet, CABINET_HEIGHT } from './cabinet';
 import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
 import { GAMES } from './games';
-import { NeonTitle, neonStyle, strike, tubeCore, unlitStyle } from './neon';
+import { NeonIconButton, pulseGlyph, speakerGlyph } from './icon-button';
+import { NeonTitle, neonStyle, strike } from './neon';
 import type { Quality, QualitySettings } from './quality';
 
 export interface FloorSceneOptions {
@@ -35,8 +35,8 @@ export interface FloorSceneOptions {
   intro: boolean;
   /** Called with the game's path once the zoom-in has covered the screen. */
   navigate: (path: string) => void;
-  /** Opens the contact panel (HTML dialog). */
-  openContact: () => void;
+  /** The stats panel (FPS, draw calls, quality tier): the HUD's pulse button toggles it. */
+  stats: { on: boolean };
 }
 
 const KONAMI = [
@@ -70,10 +70,8 @@ export class FloorScene extends Scene {
   private readonly hint = new Label('', 'caption');
   private readonly credits: Text;
   private readonly badges = new Container();
-  private readonly hireMe = new Container();
-  private readonly hireMeSign: Graphics;
-  private readonly hireMeText: Text;
-  private readonly mute: MuteButton;
+  private readonly statsButton: NeonIconButton;
+  private readonly mute: NeonIconButton;
   private readonly dots = new Graphics();
   private readonly confetti: Confetti;
   private readonly crt = new CrtFilter();
@@ -131,20 +129,20 @@ export class FloorScene extends Scene {
     wallet.onChange(renderCredits);
 
     this.buildBadges(achievements);
-    this.hireMeSign = new Graphics();
-    this.hireMeText = new Text({ text: 'HIRE ME' });
-    this.hireMeText.anchor.set(0.5);
-    this.hireMe.addChild(this.hireMeSign, this.hireMeText);
-    this.drawHireMe();
-    this.hireMe.eventMode = 'static';
-    this.hireMe.cursor = 'pointer';
-    this.hireMe.accessible = true;
-    this.hireMe.accessibleType = 'button';
-    this.hireMe.accessibleTitle = 'Hire me: contact details';
-    this.hireMe.on('pointertap', () => options.openContact());
-    achievements.onChange(() => this.drawHireMe());
-
-    this.mute = new MuteButton(sounds, 48);
+    this.statsButton = new NeonIconButton(pulseGlyph, colors.cyan, (on) =>
+      on ? 'Hide performance stats' : 'Show performance stats',
+    );
+    this.statsButton.lit = options.stats.on;
+    this.statsButton.on('pointertap', () => {
+      options.stats.on = !options.stats.on;
+      this.statsButton.lit = options.stats.on;
+    });
+    this.mute = new NeonIconButton(speakerGlyph, colors.cyan, (on) =>
+      on ? 'Mute sound' : 'Unmute sound',
+    );
+    this.mute.lit = !sounds.muted;
+    this.mute.on('pointertap', () => sounds.toggle());
+    sounds.onChange(() => (this.mute.lit = !sounds.muted));
     this.confetti = new Confetti(260, coinTexture);
 
     // Full-screen hit area so swipes work anywhere, not just on a cabinet.
@@ -184,7 +182,7 @@ export class FloorScene extends Scene {
       this.title,
       this.credits,
       this.badges,
-      this.hireMe,
+      this.statsButton,
       this.mute,
       this.caption,
       this.hint,
@@ -231,7 +229,7 @@ export class FloorScene extends Scene {
       this.title.position.set(width / 2, 56);
       this.credits.position.set(28, 36);
       this.badges.position.set(30, 76);
-      this.hireMe.position.set(width - 160, 44);
+      this.statsButton.position.set(width - 100, 44);
       this.mute.position.set(width - 44, 44);
       this.caption.position.set(width / 2, height - 46);
       this.hint.position.set(width / 2, height - 18);
@@ -249,8 +247,8 @@ export class FloorScene extends Scene {
       this.title.position.set(width / 2, 72);
       this.credits.position.set(28, 168);
       this.badges.position.set(30, 206);
-      this.hireMe.position.set(width - 130, 186);
-      this.mute.position.set(width - 44, 254);
+      this.statsButton.position.set(width - 100, 186);
+      this.mute.position.set(width - 44, 186);
       this.caption.position.set(width / 2, height - 150);
       this.hint.position.set(width / 2, height - 112);
       this.hint.text = 'SWIPE TO BROWSE · TAP TO PLAY';
@@ -302,11 +300,6 @@ export class FloorScene extends Scene {
     const target = this.cameraTarget + this.dragOffset + this.pointerParallax;
     this.cameraX += (target - this.cameraX) * Math.min(1, seconds * 6);
     this.applyCamera();
-
-    if (this.achievementsComplete) {
-      this.hireMeText.alpha =
-        0.85 + Math.sin(this.time * 19) * 0.1 + Math.sin(this.time * 5) * 0.05;
-    }
   }
 
   /** Runs the boot animation set up in the constructor, if there is one. */
@@ -314,10 +307,6 @@ export class FloorScene extends Scene {
     // A key pressed during loading may already have skipped it.
     if (this.introActive) this.introTimeline?.play();
     else this.title.shine();
-  }
-
-  private get achievementsComplete(): boolean {
-    return this.options.achievements.complete;
   }
 
   private select(index: number) {
@@ -457,26 +446,6 @@ export class FloorScene extends Scene {
     achievements.onChange(draw);
   }
 
-  /** A neon tube sign: dark glass until every badge is earned, then lit (and flickering). */
-  private drawHireMe() {
-    const lit = this.achievementsComplete;
-    const tube = () => this.hireMeSign.roundRect(-80, -26, 160, 52, 16);
-    this.hireMeSign.clear();
-    tube().fill({ color: 0x07020f, alpha: 0.75 });
-    if (lit) {
-      tube().stroke({ color: colors.neon, width: 10, alpha: 0.22 });
-      tube().stroke({ color: colors.neon, width: 5, alpha: 0.5 });
-      tube().stroke({ color: tubeCore(colors.neon), width: 2.5 });
-    } else {
-      tube().stroke({ color: 0x5e3354, width: 3 });
-    }
-    const style = { letterSpacing: 4, fontWeight: '900' } as const;
-    this.hireMeText.style = lit
-      ? neonStyle(colors.neon, 20, style)
-      : unlitStyle(colors.neon, 20, style);
-    this.hireMeText.alpha = 1;
-  }
-
   private trackKonami(event: KeyboardEvent) {
     this.konamiProgress = event.code === KONAMI[this.konamiProgress] ? this.konamiProgress + 1 : 0;
     if (event.code === KONAMI[0] && this.konamiProgress === 0) this.konamiProgress = 1;
@@ -519,7 +488,7 @@ export class FloorScene extends Scene {
     const hud = [
       this.credits,
       this.badges,
-      this.hireMe,
+      this.statsButton,
       this.mute,
       this.caption,
       this.hint,

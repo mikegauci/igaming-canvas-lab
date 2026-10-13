@@ -6,6 +6,7 @@ import { PostEffects } from './post';
 import { Quality } from './quality';
 
 const INTRO_KEY = 'lab:intro-seen';
+const STATS_KEY = 'lab:floor-stats';
 
 export interface FloorHandle {
   /** Plays the boot animation, if this visit has one; call once the floor is on screen. */
@@ -16,11 +17,7 @@ export interface FloorHandle {
  * Boots Pixi and the Casino Floor into `parent`. Loaded on demand. `onBooted` fires once Pixi and
  * the fonts are ready, before the scene is built.
  */
-export async function startFloor(
-  parent: HTMLElement,
-  openContact: () => void,
-  onBooted?: () => void,
-): Promise<FloorHandle> {
+export async function startFloor(parent: HTMLElement, onBooted?: () => void): Promise<FloorHandle> {
   const quality = Quality.fromEnvironment();
   // Post-processing needs the app, so the debug panel asks for its state through this.
   let describePost = () => 'post pending';
@@ -49,6 +46,26 @@ export async function startFloor(
     renderer.resize(screen.width, screen.height, resolution);
     post.apply(settings);
   });
+
+  // The stats panel follows the pulse button, and remembers the choice across visits.
+  const stats = {
+    get on() {
+      return game.debug;
+    },
+    set on(value: boolean) {
+      game.debug = value;
+      try {
+        localStorage.setItem(STATS_KEY, value ? '1' : '0');
+      } catch {
+        // Not remembering it is fine.
+      }
+    },
+  };
+  try {
+    if (localStorage.getItem(STATS_KEY) === '1') game.debug = true;
+  } catch {
+    // Storage blocked: start with the panel hidden (unless ?debug=1).
+  }
 
   const sounds = new SoundManager();
   sounds.synth({
@@ -115,7 +132,7 @@ export async function startFloor(
     intro,
     quality,
     navigate: (path) => window.location.assign(path),
-    openContact,
+    stats,
   });
   // Coming back with the browser's back button can restore this page from its cache, frozen
   // mid-zoom and with stale credits and badges: reload to pick up what changed in the game.

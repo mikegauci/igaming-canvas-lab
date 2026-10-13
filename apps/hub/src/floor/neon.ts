@@ -32,16 +32,6 @@ export function neonStyle(
   };
 }
 
-/** The same tube switched off: dark glass, no glow. */
-export function unlitStyle(color: number, size: number, extra: TextStyleOptions = {}) {
-  return {
-    ...neonStyle(color, size, extra),
-    fill: 0x3d2238,
-    stroke: { color: 0x5e3354, width: Math.max(2, size * 0.09), join: 'round' as const },
-    dropShadow: false as const,
-  };
-}
-
 /** Stutter pattern for a tube striking: [time in s, alpha]. */
 const STRIKE: [number, number][] = [
   [0, 0],
