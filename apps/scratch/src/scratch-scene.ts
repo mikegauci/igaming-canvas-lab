@@ -3,7 +3,6 @@ import {
   Confetti,
   formatCredits,
   GameHud,
-  OddsTable,
   Scene,
   StateMachine,
   type OutcomeService,
@@ -12,7 +11,7 @@ import {
   type Viewport,
   type Wallet,
 } from '@lab/core';
-import type { Point, Renderer, Ticker } from 'pixi.js';
+import { Point, type Renderer, type Texture, type Ticker } from 'pixi.js';
 import {
   CELLS,
   winningCells,
@@ -20,7 +19,9 @@ import {
   type CardRequest,
   type CardStats,
 } from './logic/card';
-import { CARD_HEIGHT, CARD_WIDTH, coinIcon, ScratchCard } from './view/card';
+import { ScratchCabinet } from './view/cabinet';
+import { CARD_HEIGHT, CARD_WIDTH, ScratchCard } from './view/card';
+import { PrizeOddsPanel } from './view/odds';
 
 type State = 'idle' | 'buying' | 'scratching' | 'revealing' | 'presenting';
 type Event = 'buy' | 'dealt' | 'failed' | 'finish' | 'revealed' | 'done';
@@ -38,9 +39,10 @@ const CELL_REVEALED = 0.5;
 /** Past this much of the whole card, the rest is wiped away automatically. */
 const AUTO_FINISH = 0.62;
 const SCRATCH_SOUND_GAP_MS = 80;
-const FOIL_FLAKES = [0xb9bec9, 0xd5d9e0, 0x8c929c];
+const FOIL_FLAKES = [0xdfe6f5, 0xaab3c9, 0xa1f8ff, 0xff8bd0];
 
 export interface ScratchSceneOptions {
+  artwork: Texture;
   renderer: Renderer;
   stats: CardStats;
   wallet: Wallet;
@@ -60,12 +62,13 @@ export class ScratchScene extends Scene {
   });
   private readonly hud: GameHud;
   private readonly card: ScratchCard;
-  private readonly odds: OddsTable;
+  private readonly odds: PrizeOddsPanel;
+  private readonly cabinet: ScratchCabinet;
   private readonly confetti = new Confetti();
   private result: RoundResult<CardOutcome> | null = null;
   private lastScratchSound = 0;
 
-  constructor({ renderer, stats, wallet, sounds, server }: ScratchSceneOptions) {
+  constructor({ artwork, renderer, stats, wallet, sounds, server }: ScratchSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
@@ -77,21 +80,21 @@ export class ScratchScene extends Scene {
       actionLabel: ACTION_LABELS.idle,
       betCaption: 'CARD PRICE',
       betTitles: ['Cheaper card', 'Pricier card'],
+      actionSize: 124,
+      panelWidth: 560,
+      appearance: 'arcade',
     });
     this.hud.onAction = () => this.onAction();
     this.card = new ScratchCard(renderer);
     this.card.onScratch = (added, at) => this.onScratch(added, at);
-    this.odds = new OddsTable({
-      title: 'MATCH 3 PRIZES',
-      rows: stats.odds.map(({ prize, chance }) => ({
-        icon: coinIcon(prize),
-        name: `×${prize}`,
-        value: `${(chance * 100).toFixed(2)}%`,
-      })),
-      footer: `RTP ${(stats.rtp * 100).toFixed(1)}% · WIN 1 IN ${(1 / stats.hitRate).toFixed(1)}`,
-    });
+    this.odds = new PrizeOddsPanel(stats);
+    this.cabinet = new ScratchCabinet(artwork);
+    this.hud.message.style.fontSize = 16;
+    this.hud.message.style.wordWrap = true;
+    this.hud.message.style.align = 'center';
+    this.hud.betCaption.style.fontSize = 11;
 
-    this.addChild(this.odds, this.card, this.hud, this.confetti);
+    this.addChild(this.cabinet, this.odds, this.card, this.hud, this.confetti);
     this.round.onChange((state) => {
       this.hud.action.text = ACTION_LABELS[state];
       this.hud.action.enabled = state !== 'buying' && state !== 'revealing';
@@ -102,32 +105,39 @@ export class ScratchScene extends Scene {
 
   override update(ticker: Ticker): void {
     this.confetti.tick(ticker.deltaMS / 1000);
+    this.cabinet.update(ticker.deltaMS / 1000);
   }
 
-  override resize({ width, height, orientation }: Viewport): void {
-    const { hud } = this;
+  override resize(viewport: Viewport): void {
+    const { width, height, orientation } = viewport;
+    const { hud, card } = this;
+    const cx = width / 2;
+    const table = this.odds.arrange(orientation);
+    hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
+    hud.betCaption.visible = orientation === 'landscape';
+    // The card is drawn at full size and scaled to sit in the cabinet like the wheel does.
+    const scale = orientation === 'landscape' ? 0.75 : 0.86;
+    const centerY = orientation === 'landscape' ? 398 : 488;
+    card.scale.set(scale);
+    card.position.set(cx - (CARD_WIDTH * scale) / 2, centerY - (CARD_HEIGHT * scale) / 2);
     if (orientation === 'landscape') {
-      const table = this.odds.arrange(1);
-      const column = 960;
-      this.card.position.set(70, (height - CARD_HEIGHT) / 2 - 12);
-      hud.placeHeader(column, 70);
-      this.odds.position.set(column - table.width / 2, 150);
-      hud.placeControls(column, 150 + table.height + 90);
-      hud.panel.position.set(column - hud.panelWidth / 2, height - 92);
-      hud.mute.position.set(width - 48, 44);
-      hud.music.position.set(width - 116, 44);
+      hud.placeHeader(cx, 95);
+      hud.message.position.set(1060, 217);
+      this.odds.position.set(83, centerY - table.height / 2);
+      hud.placeControls(1060, 339, { stacked: true });
+      hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
+      hud.mute.position.set(width - 54, 44);
+      hud.music.position.set(width - 122, 44);
     } else {
-      const table = this.odds.arrange(2);
-      const cx = width / 2;
-      hud.placeHeader(cx, 70);
-      this.card.position.set(cx - CARD_WIDTH / 2, 150);
-      const controlsY = this.card.y + CARD_HEIGHT + 90;
-      hud.placeControls(cx, controlsY, { spread: 170 });
-      this.odds.position.set(cx - table.width / 2, controlsY + 112);
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
-      hud.mute.position.set(width - 50, 60);
-      hud.music.position.set(width - 118, 60);
+      hud.placeHeader(cx, 143);
+      hud.message.position.set(cx, 212);
+      hud.placeControls(cx, 846, { spread: 207 });
+      hud.panel.position.set(cx - hud.panelWidth / 2, 956);
+      this.odds.position.set(cx - table.width / 2, 1050);
+      hud.mute.position.set(width - 57, 51);
+      hud.music.position.set(width - 125, 51);
     }
+    this.cabinet.arrange(viewport, cx, card.y + CARD_HEIGHT * scale);
   }
 
   override enter(): void {
@@ -176,9 +186,10 @@ export class ScratchScene extends Scene {
 
   private onScratch(added: number, at: Point) {
     if (added === 0 || this.round.state !== 'scratching') return;
+    const spot = this.toLocal(at, this.card);
     this.confetti.burst({
-      x: this.card.x + at.x,
-      y: this.card.y + at.y,
+      x: spot.x,
+      y: spot.y,
       count: 2,
       angle: Math.PI / 2,
       spread: Math.PI,
@@ -214,9 +225,10 @@ export class ScratchScene extends Scene {
       this.hud.unlock('scratch-match');
       this.sounds.play('win');
       this.hud.say(`THREE ×${outcome.prize} — WIN ${formatCredits(win)}!`, colors.gold);
+      const center = this.toLocal(new Point(CARD_WIDTH / 2, CARD_HEIGHT * 0.45), this.card);
       this.confetti.burst({
-        x: this.card.x + CARD_WIDTH / 2,
-        y: this.card.y + CARD_HEIGHT * 0.45,
+        x: center.x,
+        y: center.y,
         count: Math.round(70 + 40 * Math.log2(outcome.prize + 1)),
       });
       await this.hud.presentWin(win, outcome.prize);

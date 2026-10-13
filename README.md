@@ -159,6 +159,9 @@ A 12-segment prize wheel. Space spins, and pressing it again makes the wheel lan
 
 A match-3 scratch card. Drag to scratch, or press REVEAL or Space.
 
+- **Diamond arcade cabinet.** Reuses the floor cabinet's crystal illustration behind a chrome
+  marquee, with a metal-framed card, holographic foil and dark enamel prize windows. Controls
+  and exact match-3 odds flank the card in landscape and stack below it in portrait.
 - **RenderTexture scratching.** The prizes sit above a silver foil and are masked by a
   `RenderTexture`. Each pointer move paints a round-capped stroke from the last point into it, so
   fast swipes leave no gaps.

@@ -1,4 +1,4 @@
-import { colors, fontFamily } from '@lab/core';
+import { arcadeFont, chromeFill, colors, metalFill, verticalGradient } from '@lab/core';
 import { gsap } from 'gsap';
 import {
   Container,
@@ -48,12 +48,19 @@ function drawCoin(symbol: CardSymbol, radius: number): Container {
     .fill(style.coin)
     .stroke({ color: style.rim, width: radius * 0.12 })
     .circle(0, 0, radius * 0.78)
-    .stroke({ color: style.rim, width: radius * 0.04, alpha: 0.6 });
+    .stroke({ color: style.rim, width: radius * 0.04, alpha: 0.6 })
+    .ellipse(-radius * 0.18, -radius * 0.5, radius * 0.48, radius * 0.17)
+    .fill({ color: 0xffffff, alpha: 0.28 });
   if (symbol === 100)
     coin.star(0, 0, 5, radius * 0.95, radius * 0.6).fill({ color: colors.gold, alpha: 0.25 });
   const label = new Text({
     text: `×${symbol}`,
-    style: { fontFamily, fontSize: radius * 0.62, fontWeight: '900', fill: style.text },
+    style: {
+      fontFamily: arcadeFont,
+      fontSize: radius * (symbol >= 100 ? 0.44 : 0.54),
+      fontWeight: '900',
+      fill: style.text,
+    },
   });
   label.anchor.set(0.5);
   return new Container({ children: [coin, label] });
@@ -79,19 +86,31 @@ export function coinIcon(symbol: CardSymbol): Container {
 
 function drawFoil(): Container {
   const foil = new Container();
-  const g = new Graphics().roundRect(0, 0, AREA, AREA, 14).fill(0xb9bec9);
-  for (let i = -AREA; i < AREA * 2; i += 36) {
+  // Holographic silver: a cool chrome sweep with faint cyan and pink sheen bands.
+  const g = new Graphics().roundRect(0, 0, AREA, AREA, 14).fill(
+    verticalGradient([
+      [0, '#dfe6f5'],
+      [0.35, '#aab3c9'],
+      [0.55, '#c9c3e0'],
+      [1, '#9aa3bb'],
+    ]),
+  );
+  for (let i = -AREA, n = 0; i < AREA * 2; i += 36, n++) {
     g.moveTo(i, 0)
       .lineTo(i + AREA * 0.6, AREA)
-      .stroke({ color: 0xffffff, width: 10, alpha: 0.18 });
+      .stroke({
+        color: n % 3 === 0 ? 0xa1f8ff : n % 3 === 1 ? 0xff8bd0 : 0xffffff,
+        width: 10,
+        alpha: 0.2,
+      });
   }
   // Faint outlines hint where the nine prizes are, like a printed card.
   for (let i = 0; i < CELLS; i++) {
     const { x, y } = cellRect(i);
     g.roundRect(x + 4, y + 4, CELL - 8, CELL - 8, 12).stroke({
-      color: 0x8c929c,
+      color: 0x6f7591,
       width: 2,
-      alpha: 0.5,
+      alpha: 0.55,
     });
   }
   foil.addChild(g);
@@ -99,7 +118,13 @@ function drawFoil(): Container {
     const { x, y } = cellRect(i);
     const label = new Text({
       text: 'SCRATCH',
-      style: { fontFamily, fontSize: 22, fontWeight: '900', fill: 0x8c929c, letterSpacing: 2 },
+      style: {
+        fontFamily: arcadeFont,
+        fontSize: 18,
+        fontWeight: '900',
+        fill: 0x6f7591,
+        letterSpacing: 2,
+      },
     });
     label.anchor.set(0.5);
     label.position.set(x + CELL / 2, y + CELL / 2);
@@ -139,13 +164,37 @@ export class ScratchCard extends Container {
     super();
     this.renderer = renderer;
 
+    // Metal cabinet frame around a neon-edged card, like the wheel's rim.
     const frame = new Graphics()
-      .roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 26)
-      .fill(colors.panel)
-      .stroke({ color: colors.neon, width: 4, alpha: 0.85 });
+      .roundRect(-12, -8, CARD_WIDTH + 24, CARD_HEIGHT + 24, 32)
+      .fill({ color: 0x050611, alpha: 0.85 })
+      .roundRect(-10, -10, CARD_WIDTH + 20, CARD_HEIGHT + 20, 32)
+      .fill(metalFill())
+      .stroke({ color: 0xabb7d4, width: 2 })
+      .roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 24)
+      .fill(0x101126)
+      .stroke({ color: colors.neon, width: 3, alpha: 0.9 })
+      .roundRect(4, 4, CARD_WIDTH - 8, CARD_HEIGHT - 8, 21)
+      .stroke({ color: colors.neon, width: 9, alpha: 0.13 });
+    for (const x of [18, CARD_WIDTH - 18]) {
+      frame
+        .circle(x, HEADER / 2 + 4, 4)
+        .fill(x < CARD_WIDTH / 2 ? 0xa1f8ff : 0xff8bd0)
+        .circle(x, HEADER / 2 + 4, 8)
+        .fill({ color: x < CARD_WIDTH / 2 ? 0xa1f8ff : 0xff8bd0, alpha: 0.18 });
+    }
     const heading = new Text({
       text: 'MATCH 3 TO WIN',
-      style: { fontFamily, fontSize: 30, fontWeight: '900', fill: colors.gold, letterSpacing: 3 },
+      style: {
+        fontFamily: arcadeFont,
+        fontSize: 30,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        fill: chromeFill(),
+        stroke: { color: 0x09091a, width: 4, join: 'round' },
+        letterSpacing: 2,
+        padding: 12,
+      },
     });
     heading.anchor.set(0.5);
     heading.position.set(CARD_WIDTH / 2, HEADER / 2 + 6);
@@ -160,7 +209,15 @@ export class ScratchCard extends Container {
 
     this.foilTexture = bake(renderer, drawFoil(), new Rectangle(0, 0, AREA, AREA));
     const foil = new Sprite(this.foilTexture);
-    const paper = new Graphics().roundRect(0, 0, AREA, AREA, 14).fill(0xfff6e0);
+    // Under the foil: a dark enamel tray with a lit window per prize.
+    const paper = new Graphics().roundRect(0, 0, AREA, AREA, 14).fill(0x0b0c1d);
+    for (let i = 0; i < CELLS; i++) {
+      const { x, y } = cellRect(i);
+      paper
+        .roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 14)
+        .fill(i % 2 ? 0x1b1934 : 0x161830)
+        .stroke({ color: colors.cyan, width: 1.5, alpha: 0.35 });
+    }
     this.glows = Array.from({ length: CELLS }, (_, i) => {
       const { x, y } = cellRect(i);
       const glow = new Graphics()
