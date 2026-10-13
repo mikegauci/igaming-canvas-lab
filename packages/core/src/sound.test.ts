@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryStore } from './storage';
 
 const mocks = vi.hoisted(() => ({
-  context: { state: 'suspended', resume: vi.fn() },
+  context: Object.assign(new EventTarget(), { state: 'suspended', resume: vi.fn() }),
   start: vi.fn(),
   pause: vi.fn(),
   setMuted: vi.fn(),
@@ -55,7 +55,7 @@ describe('shared lobby/game audio lifecycle', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['pointerdown', 'keydown'])(
+  it.each(['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'])(
     'unlocks music on %s after initial autoplay is blocked',
     async (event) => {
       await Promise.resolve();
@@ -65,6 +65,19 @@ describe('shared lobby/game audio lifecycle', () => {
       expect(mocks.start).toHaveBeenCalledOnce();
     },
   );
+
+  it('starts music as soon as the context runs, even when another listener resumed it', async () => {
+    await Promise.resolve();
+    expect(mocks.start).not.toHaveBeenCalled();
+    // A touch tap: pointerdown arrives before the browser grants activation and fails to resume.
+    page.dispatchEvent(new Event('pointerdown'));
+    await Promise.resolve();
+    expect(mocks.start).not.toHaveBeenCalled();
+    // @pixi/sound then resumes the context on touchend.
+    mocks.context.state = 'running';
+    mocks.context.dispatchEvent(new Event('statechange'));
+    expect(mocks.start).toHaveBeenCalledOnce();
+  });
 
   it('mutes effects without changing music and remembers the choice', () => {
     const store = memoryStore();
