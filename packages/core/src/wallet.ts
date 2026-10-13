@@ -12,6 +12,8 @@ export interface WalletOptions {
   initialBalance?: number;
   betLevels?: readonly number[];
   defaultBet?: number;
+  /** Max bet stakes the balance rounded down to a multiple of this (e.g. a slot's line count). */
+  betStep?: number;
 }
 
 type Listener = (state: WalletState) => void;
@@ -23,6 +25,7 @@ const assertAmount = (amount: number) => {
 /** Fake credits. Whole numbers only, so there is no floating-point drift in balances. */
 export class Wallet {
   readonly betLevels: readonly number[];
+  readonly betStep: number;
   private readonly store: KeyValueStore;
   private readonly storageKey: string;
   private readonly initialBalance: number;
@@ -36,8 +39,11 @@ export class Wallet {
     initialBalance = 1000,
     betLevels = [1, 2, 5, 10, 20, 50, 100],
     defaultBet = betLevels[2] ?? betLevels[0],
+    betStep = 1,
   }: WalletOptions = {}) {
     if (betLevels.length === 0) throw new RangeError('Wallet needs at least one bet level');
+    if (!Number.isInteger(betStep) || betStep < 1)
+      throw new RangeError(`Invalid bet step: ${betStep}`);
     betLevels.forEach(assertAmount);
     assertAmount(initialBalance);
 
@@ -45,6 +51,7 @@ export class Wallet {
     this.storageKey = storageKey;
     this.initialBalance = initialBalance;
     this.betLevels = [...betLevels].sort((a, b) => a - b);
+    this.betStep = betStep;
     this._bet =
       defaultBet !== undefined && betLevels.includes(defaultBet) ? defaultBet : this.betLevels[0]!;
     this._balance = this.restore() ?? initialBalance;
@@ -68,23 +75,29 @@ export class Wallet {
 
   setBet(amount: number): void {
     if (!this.betLevels.includes(amount)) throw new RangeError(`Bet ${amount} is not a bet level`);
-    if (amount === this._bet) return;
-    this._bet = amount;
-    this.emit();
+    this.changeBet(amount);
   }
 
-  /** Moves the bet one level up or down, clamped to the ends of the list. */
+  /**
+   * Moves the bet to the next level up or down, clamped to the ends of the list. From a max bet
+   * that sits between levels, it goes to the nearest level in that direction.
+   */
   stepBet(direction: 1 | -1): void {
-    const index = this.betLevels.indexOf(this._bet);
+    const levels = this.betLevels;
     const next =
-      this.betLevels[Math.min(this.betLevels.length - 1, Math.max(0, index + direction))]!;
+      direction === 1
+        ? (levels.find((level) => level > this._bet) ?? levels[levels.length - 1]!)
+        : ([...levels].reverse().find((level) => level < this._bet) ?? levels[0]!);
     this.setBet(next);
   }
 
-  /** Max bet: the highest level the balance covers, or the lowest level if none is covered. */
+  /**
+   * Max bet: the whole balance (rounded down to a multiple of `betStep`), or the lowest level if
+   * the balance is below it.
+   */
   maxBet(): void {
-    const affordable = this.betLevels.filter((level) => level <= this._balance);
-    this.setBet(affordable[affordable.length - 1] ?? this.betLevels[0]!);
+    const allIn = Math.floor(this._balance / this.betStep) * this.betStep;
+    this.changeBet(Math.max(allIn, this.betLevels[0]!));
   }
 
   /** Takes the stake. Returns false, and changes nothing, if the balance is too low. */
@@ -110,6 +123,12 @@ export class Wallet {
   onChange(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  private changeBet(amount: number) {
+    if (amount === this._bet) return;
+    this._bet = amount;
+    this.emit();
   }
 
   private update(balance: number) {

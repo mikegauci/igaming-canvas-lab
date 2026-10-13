@@ -2,7 +2,7 @@ import '@lab/core/game.css';
 import './style.css';
 import { createGame, MockOutcomeServer, seedFromQuery, SoundManager, Wallet } from '@lab/core';
 import { Assets, type Texture } from 'pixi.js';
-import { BET_LEVELS } from './logic/config';
+import { BET_LEVELS, PAYLINES } from './logic/config';
 import { resolveSpin } from './logic/evaluate';
 import { SlotScene } from './slot-scene';
 import { createSymbolTextures } from './view/symbol-textures';
@@ -57,7 +57,7 @@ await game.scenes.change(
     textures: createSymbolTextures(game.app.renderer),
     stats: __SLOT_STATS__,
     // Same storage key as the hub and other games, so the balance carries between them.
-    wallet: new Wallet({ betLevels: BET_LEVELS, defaultBet: 25 }),
+    wallet: new Wallet({ betLevels: BET_LEVELS, defaultBet: 25, betStep: PAYLINES.length }),
     sounds,
     perf: game,
     server: new MockOutcomeServer(resolveSpin, { seed: seedFromQuery() }),
