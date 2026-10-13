@@ -15,6 +15,7 @@ import type { SpinOutcome, SpinRequest } from './logic/evaluate';
 import type { SlotStats } from './logic/stats';
 import { PaytablePanel } from './view/paytable';
 import { SlotMachine } from './view/slot-machine';
+import { SlotCabinet } from './view/cabinet';
 
 type State = 'idle' | 'spinning' | 'landing' | 'presenting';
 type Event = 'spin' | 'result' | 'failed' | 'landed' | 'done';
@@ -27,6 +28,7 @@ const ACTION_LABELS: Record<State, string> = {
 };
 
 export interface SlotSceneOptions {
+  artwork: Texture;
   textures: Record<SymbolId, Texture>;
   stats: SlotStats;
   wallet: Wallet;
@@ -46,10 +48,11 @@ export class SlotScene extends Scene {
   private readonly hud: GameHud;
   private readonly machine: SlotMachine;
   private readonly paytable: PaytablePanel;
+  private readonly cabinet: SlotCabinet;
   /** Last result shown, so a failed round can land the reels back where they were. */
   private lastStops = REEL_STRIPS.map(() => 0);
 
-  constructor({ textures, stats, wallet, sounds, server }: SlotSceneOptions) {
+  constructor({ artwork, textures, stats, wallet, sounds, server }: SlotSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
@@ -59,50 +62,66 @@ export class SlotScene extends Scene {
       wallet,
       sounds,
       actionLabel: ACTION_LABELS.idle,
-      actionSize: 150,
-      panelWidth: 680,
+      actionSize: 124,
+      panelWidth: SlotMachine.WIDTH,
+      appearance: 'arcade',
     });
     this.hud.onAction = () => this.onAction();
     this.machine = new SlotMachine(textures, this.lastStops);
     this.machine.onReelStop = () => sounds.play('stop');
     this.paytable = new PaytablePanel(textures, stats);
+    this.cabinet = new SlotCabinet(artwork);
+    this.hud.message.style.fontSize = 16;
+    this.hud.message.style.wordWrap = true;
+    this.hud.message.style.align = 'center';
+    this.hud.message.style.fill = 0xd5d3e8;
+    this.hud.betCaption.style.fontSize = 11;
+    this.hud.betCaption.text = 'TOTAL BET';
 
-    this.addChild(this.paytable, this.machine, this.hud);
+    this.addChild(this.cabinet, this.paytable, this.machine, this.hud);
     this.round.onChange((state) => {
       this.hud.action.text = ACTION_LABELS[state];
       this.hud.setBetting(state === 'idle');
     });
-    this.hud.say('Press SPIN or Space');
+    this.hud.say('Ready when you are');
   }
 
   override update(ticker: Ticker): void {
     this.machine.update(ticker);
+    this.cabinet.update(ticker.deltaMS / 1000);
   }
 
-  override resize({ width, height, orientation }: Viewport): void {
+  override resize(viewport: Viewport): void {
+    const { width, height, orientation } = viewport;
     const { hud } = this;
     const cx = width / 2;
     const table = this.paytable.arrange(orientation);
+    hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : SlotMachine.WIDTH;
+    hud.betCaption.visible = orientation === 'landscape';
 
     if (orientation === 'landscape') {
-      hud.placeHeader(cx, 44);
-      this.machine.position.set(cx - SlotMachine.WIDTH / 2 - 20, 112);
+      this.machine.position.set(cx - SlotMachine.WIDTH / 2, 188);
+      hud.placeHeader(cx, 95);
+      hud.message.position.set(1060, 217);
       const machineMid = this.machine.y + SlotMachine.HEIGHT / 2;
-      this.paytable.position.set(this.machine.x - table.width - 32, machineMid - table.height / 2);
-      hud.placeControls(this.machine.x + SlotMachine.WIDTH + 140, machineMid - 40, {
+      this.paytable.position.set(this.machine.x - table.width - 30, machineMid - table.height / 2);
+      hud.placeControls(1060, 339, {
         stacked: true,
       });
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 96);
-      hud.mute.position.set(width - 48, 44);
+      hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
+      hud.mute.position.set(width - 54, 44);
     } else {
-      hud.placeHeader(cx, 70);
-      this.machine.position.set(cx - SlotMachine.WIDTH / 2, 160);
-      const controlsY = this.machine.y + SlotMachine.HEIGHT + 120;
-      hud.placeControls(cx, controlsY, { spread: 180 });
-      this.paytable.position.set(cx - table.width / 2, controlsY + 130);
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 110);
-      hud.mute.position.set(width - 50, 60);
+      hud.placeHeader(cx, 143);
+      this.machine.position.set(cx - SlotMachine.WIDTH / 2, 238);
+      hud.message.position.set(cx, 212);
+      const controlsY = this.machine.y + 552;
+      hud.placeControls(cx, controlsY, { spread: 207 });
+      hud.betCaption.position.set(cx, controlsY + 61);
+      hud.panel.position.set(cx - hud.panelWidth / 2, 906);
+      this.paytable.position.set(cx - table.width / 2, 1014);
+      hud.mute.position.set(width - 57, 51);
     }
+    this.cabinet.arrange(viewport, this.machine.x, this.machine.y, SlotMachine.WIDTH);
   }
 
   override enter(): void {

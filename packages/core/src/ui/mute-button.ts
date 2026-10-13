@@ -10,12 +10,19 @@ export class MuteButton extends Container {
   constructor(
     private readonly sounds: SoundManager,
     private readonly size = 56,
+    appearance: 'classic' | 'arcade' = 'classic',
   ) {
     super();
     const bg = new Graphics()
       .circle(0, 0, size / 2)
       .fill({ color: colors.panel, alpha: 0.9 })
       .stroke({ color: colors.cyan, alpha: 0.5, width: 2 });
+    if (appearance === 'arcade') {
+      bg.circle(0, 0, size / 2 + 3)
+        .stroke({ color: colors.cyan, width: 8, alpha: 0.12 })
+        .circle(0, 0, size / 2)
+        .stroke({ color: 0xb6f8ff, width: 1.5 });
+    }
     this.addChild(bg, this.icon);
 
     this.eventMode = 'static';

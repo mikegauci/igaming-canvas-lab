@@ -1,14 +1,14 @@
-import { colors } from '@lab/core';
+import { colors, metalFill, verticalGradient } from '@lab/core';
 import { gsap } from 'gsap';
 import { Container, Graphics, type Texture, type Ticker } from 'pixi.js';
 import { PAYLINES, REEL_STRIPS, ROWS, type SymbolId } from '../logic/config';
 import type { LineWin } from '../logic/evaluate';
 import { Reel } from './reel';
 
-export const CELL_WIDTH = 170;
-export const CELL_HEIGHT = 150;
+export const CELL_WIDTH = 158;
+export const CELL_HEIGHT = 126;
 const REEL_GAP = 10;
-const PADDING = 18;
+const PADDING = 24;
 /** Reels keep spinning at least this long, even if the server answers instantly. */
 const MIN_SPIN_SECONDS = 0.7;
 /** Delay between one reel stopping and the next. */
@@ -37,13 +37,25 @@ export class SlotMachine extends Container {
   constructor(textures: Record<SymbolId, Texture>, initialStops: readonly number[]) {
     super();
 
+    const w = SlotMachine.WIDTH;
+    const h = SlotMachine.HEIGHT;
     const frame = new Graphics()
-      .roundRect(0, 0, SlotMachine.WIDTH, SlotMachine.HEIGHT, 24)
-      .fill(colors.panel)
-      .stroke({ color: colors.neon, width: 4, alpha: 0.85 });
+      .roundRect(-8, -8, w + 16, h + 16, 25)
+      .fill(0x060612)
+      .roundRect(0, 0, w, h, 20)
+      .fill(metalFill())
+      .stroke({ color: 0xd2e0f4, width: 1.5 })
+      .roundRect(7, 7, w - 14, h - 14, 15)
+      .fill(0x141022)
+      .stroke({ color: colors.neon, width: 3 })
+      .roundRect(11, 11, w - 22, h - 22, 12)
+      .stroke({ color: 0xffb9e6, width: 1, alpha: 0.7 })
+      .roundRect(PADDING - 3, PADDING - 3, WINDOW_WIDTH + 6, WINDOW_HEIGHT + 6, 8)
+      .fill(0x040712)
+      .stroke({ color: 0x5edfff, width: 1, alpha: 0.55 });
     const glow = new Graphics()
-      .roundRect(-6, -6, SlotMachine.WIDTH + 12, SlotMachine.HEIGHT + 12, 30)
-      .stroke({ color: colors.neon, width: 10, alpha: 0.18 });
+      .roundRect(-4, -4, w + 8, h + 8, 23)
+      .stroke({ color: colors.neon, width: 16, alpha: 0.12 });
 
     const reelWindow = new Container();
     reelWindow.position.set(PADDING, PADDING);
@@ -52,7 +64,18 @@ export class SlotMachine extends Container {
 
     this.reels = REEL_STRIPS.map((strip, i) => {
       const x = i * (CELL_WIDTH + REEL_GAP);
-      columns.roundRect(x, 0, CELL_WIDTH, WINDOW_HEIGHT, 10).fill(0x0f0f1f);
+      columns
+        .roundRect(x, 0, CELL_WIDTH, WINDOW_HEIGHT, 6)
+        .fill(
+          verticalGradient([
+            [0, '#27304c'],
+            [0.12, '#c0ccdf'],
+            [0.4, '#f5f7ff'],
+            [0.65, '#d3dbec'],
+            [1, '#313552'],
+          ]),
+        )
+        .stroke({ color: 0x93add0, width: 1 });
       const reel = new Reel({
         strip,
         textures,
@@ -80,8 +103,24 @@ export class SlotMachine extends Container {
         .fill({ color: 0x000000, alpha: 0.32 - i * 0.05 });
     }
 
+    const chrome = new Graphics();
+    for (const x of [12, w - 12]) {
+      for (const y of [12, h - 12]) {
+        chrome
+          .circle(x, y, 3)
+          .fill(0xc3cce1)
+          .moveTo(x - 2, y)
+          .lineTo(x + 2, y)
+          .stroke({ color: 0x454966, width: 1 });
+      }
+    }
+    for (let row = 0; row < ROWS; row++) {
+      const y = PADDING + (row + 0.5) * CELL_HEIGHT;
+      chrome.poly([8, y - 5, 16, y, 8, y + 5]).fill(colors.cyan);
+      chrome.poly([w - 8, y - 5, w - 16, y, w - 8, y + 5]).fill(colors.cyan);
+    }
     reelWindow.addChild(columns, reelLayer, mask, shade, this.lines);
-    this.addChild(glow, frame, reelWindow);
+    this.addChild(glow, frame, reelWindow, chrome);
   }
 
   update(ticker: Ticker): void {
