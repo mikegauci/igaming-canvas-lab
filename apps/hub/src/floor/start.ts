@@ -136,11 +136,8 @@ export async function startFloor(
     navigate: (path) => window.location.assign(path),
     stats,
   });
-  // Coming back with the browser's back button can restore this page from its cache, frozen
-  // mid-zoom and with stale credits and badges: reload to pick up what changed in the game.
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) window.location.reload();
-  });
+  // Coming back with the back button reloads the floor (createGame releases it on pagehide), so it
+  // isn't frozen mid-zoom and picks up the credits and badges that changed in the game.
   await game.scenes.change(scene, { fade: intro ? 0 : 0.3 });
 
   return {
