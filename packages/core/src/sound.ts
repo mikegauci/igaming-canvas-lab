@@ -30,6 +30,9 @@ export class SoundManager {
     if (this._muted) sound.muteAll();
     else sound.unmuteAll();
     const context = sound.context.audioContext;
+    // @pixi/sound's own pausing follows window focus, which mobile browsers often don't give back
+    // on returning from another app, leaving effects paused. This class handles it instead.
+    sound.disableAutoPause = true;
     if (context) this.music = new BackgroundMusic(context, this._musicMuted);
 
     // iOS routes Web Audio through the ringer channel by default, so the silent switch mutes the
@@ -57,13 +60,18 @@ export class SoundManager {
       if (!context || context.state === 'running') return ready();
       void context.resume().then(ready, () => undefined);
     };
+    // Silence everything while the page is away (another app or tab), and wake it on return.
+    const sleep = () => {
+      this.music?.pause();
+      if (context?.state === 'running') void context.suspend().catch(() => undefined);
+    };
     const visibility = () => {
-      if (document.hidden) this.music?.pause();
+      if (document.hidden) sleep();
       else unlock();
     };
     const pagehide = () => {
       pageActive = false;
-      this.music?.pause();
+      sleep();
     };
     const pageshow = () => {
       pageActive = true;
