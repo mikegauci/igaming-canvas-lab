@@ -55,10 +55,18 @@ const KONAMI = [
   'KeyA',
 ];
 const SWIPE_THRESHOLD = 50;
+/** A release faster than this (design px/s) counts as a flick, even over a short distance. */
+const FLICK_SPEED = 300;
+/** How far a flick coasts, in seconds of its release speed, before snapping to a cabinet. */
+const FLICK_COAST = 0.25;
+/** Portrait carousel: the gap between cabinets. */
+const CAROUSEL_SPACING = 380;
+/** Portrait HUD scale, so the credits, badges and buttons stay finger-sized on a phone. */
+const PORTRAIT_HUD_SCALE = 1.7;
 const SELECTED_KEY = 'lab:floor-selected';
 /** Portrait layout: where the carousel dots sit, and the bottom of the HUD (title, badges). */
 const DOTS_FROM_BOTTOM = 190;
-const HUD_BOTTOM = 260;
+const HUD_BOTTOM = 280;
 
 /**
  * The Casino Floor: a synthwave arcade with one cabinet per game. Nothing to learn: hover
@@ -95,6 +103,11 @@ export class FloorScene extends Scene {
   /** Extra camera offset while a finger drags the carousel. */
   private dragOffset = 0;
   private dragStartX: number | null = null;
+  private dragPointer: number | null = null;
+  /** Recent finger positions (time in ms, x in screen px), for the release speed. */
+  private dragSamples: { t: number; x: number }[] = [];
+  /** The badge whose card a tap opened (touch has no hover), or -1. */
+  private tappedBadge = -1;
   /** How far the last gesture travelled, so a swipe that ends on a cabinet isn't a tap. */
   private lastDragDistance = 0;
   private introActive = false;
@@ -161,12 +174,20 @@ export class FloorScene extends Scene {
     // Full-screen hit area so swipes work anywhere, not just on a cabinet.
     this.eventMode = 'static';
     this.on('pointerdown', (e) => {
+      // A tap anywhere but a badge closes a badge card opened by touch.
+      if (e.target?.parent !== this.badges) this.hideBadgeTip();
+      if (this.dragPointer !== null) return;
+      this.dragPointer = e.pointerId;
       this.dragStartX = e.global.x;
+      this.dragSamples = [{ t: performance.now(), x: e.global.x }];
       this.lastDragDistance = 0;
     });
-    this.on('pointermove', (e) => this.drag(e.global.x));
-    this.on('pointerup', () => this.endDrag());
-    this.on('pointerupoutside', () => this.endDrag());
+    this.on('globalpointermove', (e) => {
+      if (e.pointerId === this.dragPointer) this.drag(e.global.x);
+    });
+    this.on('pointerup', (e) => this.endDrag(e.pointerId));
+    this.on('pointerupoutside', (e) => this.endDrag(e.pointerId));
+    this.on('pointercancel', (e) => this.endDrag(e.pointerId));
     this.on('pointerleave', () => (this.pointerParallax = 0));
     this.on('globalpointermove', (e) => {
       if (this.viewport.orientation === 'landscape') {
@@ -242,6 +263,11 @@ export class FloorScene extends Scene {
       });
       this.title.layout(1);
       this.title.position.set(width / 2, 56);
+      for (const item of [this.credits, this.badges, this.badgesDone, this.badgeTip]) {
+        item.scale.set(1);
+      }
+      this.statsButton.scale.set(1);
+      this.mute.scale.set(1);
       this.credits.position.set(28, 36);
       this.badges.position.set(30, 76);
       this.placeBadgeExtras();
@@ -256,7 +282,7 @@ export class FloorScene extends Scene {
       // that their marquees run into the HUD.
       const scale = 1.5;
       const ground = Math.max(HUD_BOTTOM + CABINET_HEIGHT * scale, height - DOTS_FROM_BOTTOM - 50);
-      const spacing = 380;
+      const spacing = CAROUSEL_SPACING;
       this.backdrop.build(width, height, 600, ground, spacing * (GAMES.length - 1));
       this.cabinets.forEach((cabinet, i) => {
         cabinet.scale.set(scale);
@@ -264,11 +290,19 @@ export class FloorScene extends Scene {
       });
       this.title.layout(0.74);
       this.title.position.set(width / 2, 72);
-      this.credits.position.set(28, 168);
-      this.badges.position.set(30, 206);
+      const hud = PORTRAIT_HUD_SCALE;
+      for (const item of [this.credits, this.badges, this.badgeTip]) item.scale.set(hud);
+      // The "all collected" line is long; full HUD scale would run it off a narrow screen.
+      this.badgesDone.scale.set(1.3);
+      this.statsButton.scale.set(hud);
+      this.mute.scale.set(hud);
+      this.credits.position.set(28, 160);
+      this.badges.position.set(30, 212);
       this.placeBadgeExtras();
-      this.statsButton.position.set(width - 100, 186);
-      this.mute.position.set(width - 44, 186);
+      // The buttons are 46 px across at scale 1; keep a gap of a third of that between them.
+      const button = 23 * hud;
+      this.mute.position.set(width - 24 - button, 192);
+      this.statsButton.position.set(width - 24 - button * 3 - 16, 192);
       this.caption.position.set(width / 2, height - 150);
       this.hint.position.set(width / 2, height - 112);
       this.hint.text = 'SWIPE TO BROWSE · TAP TO PLAY';
@@ -388,7 +422,7 @@ export class FloorScene extends Scene {
 
   private targetFor(index: number): number {
     if (this.viewport.orientation === 'landscape') return 0;
-    return index * 380;
+    return index * CAROUSEL_SPACING;
   }
 
   private applyCamera() {
@@ -397,18 +431,50 @@ export class FloorScene extends Scene {
     this.drawDots();
   }
 
+  /** The carousel follows the finger 1:1, with a rubber-band pull past the first and last cabinet. */
   private drag(x: number) {
     if (this.dragStartX === null || this.viewport.orientation !== 'portrait') return;
-    this.dragOffset = (this.dragStartX - x) / this.root.scale.x;
+    const now = performance.now();
+    this.dragSamples.push({ t: now, x });
+    while (this.dragSamples.length > 2 && now - this.dragSamples[0]!.t > 100) {
+      this.dragSamples.shift();
+    }
+    const raw = (this.dragStartX - x) / this.root.scale.x;
+    const max = this.targetFor(GAMES.length - 1);
+    const at = this.cameraTarget + raw;
+    const overshoot = at < 0 ? at : at > max ? at - max : 0;
+    this.dragOffset = raw - overshoot * 0.65;
+    this.lastDragDistance = Math.max(this.lastDragDistance, Math.abs(raw));
+    // No easing while the finger is down: lag is what makes a swipe feel heavy.
+    this.cameraX = this.cameraTarget + this.dragOffset;
+    this.applyCamera();
   }
 
-  private endDrag() {
-    this.lastDragDistance = Math.abs(this.dragOffset);
-    if (this.dragStartX !== null && Math.abs(this.dragOffset) > SWIPE_THRESHOLD) {
-      this.select(this.selected + Math.sign(this.dragOffset));
+  /** On release, coast with the finger's speed and settle on the nearest cabinet. */
+  private endDrag(pointerId: number) {
+    if (pointerId !== this.dragPointer) return;
+    if (this.dragStartX !== null && this.viewport.orientation === 'portrait') {
+      const offset = this.dragOffset;
+      const first = this.dragSamples[0];
+      const last = this.dragSamples[this.dragSamples.length - 1];
+      const fresh = first && last && performance.now() - last.t < 80 && last.t > first.t;
+      // Design px per second, positive when the camera moves right (finger moving left).
+      const velocity = fresh
+        ? ((first.x - last.x) / this.root.scale.x / (last.t - first.t)) * 1000
+        : 0;
+      const projected = this.cameraTarget + offset + velocity * FLICK_COAST;
+      let index = Math.round(projected / CAROUSEL_SPACING);
+      if (index === this.selected) {
+        if (Math.abs(velocity) > FLICK_SPEED) index += Math.sign(velocity);
+        else if (Math.abs(offset) > SWIPE_THRESHOLD) index += Math.sign(offset);
+      }
+      index = Math.max(0, Math.min(GAMES.length - 1, index));
+      this.select(index);
     }
+    this.dragPointer = null;
     this.dragStartX = null;
     this.dragOffset = 0;
+    this.dragSamples = [];
   }
 
   private get root(): Container {
@@ -455,7 +521,7 @@ export class FloorScene extends Scene {
         icon.cursor = 'help';
         icon.accessible = true;
         icon.accessibleTitle = `${badge.title}: ${earned ? 'earned' : badge.hint}`;
-        icon.on('pointerover', () => {
+        const show = () => {
           icon.scale.set(1.15);
           this.badgeTip.show({
             game: game.title,
@@ -465,25 +531,46 @@ export class FloorScene extends Scene {
             color: game.color,
             progress: [achievements.count, ACHIEVEMENTS.length],
           });
+        };
+        // A mouse previews on hover; a finger taps a badge to open its card and taps again
+        // (or anywhere else) to close it.
+        icon.on('pointerover', (e) => {
+          if (e.pointerType === 'mouse') show();
         });
-        icon.on('pointerout', () => {
-          icon.scale.set(1);
-          this.badgeTip.hide();
+        icon.on('pointerout', (e) => {
+          if (e.pointerType === 'mouse') this.hideBadgeTip();
+        });
+        icon.on('pointertap', (e) => {
+          if (e.pointerType === 'mouse') return;
+          if (this.tappedBadge === i) {
+            this.hideBadgeTip();
+            return;
+          }
+          this.hideBadgeTip();
+          this.tappedBadge = i;
+          show();
         });
         this.badges.addChild(icon);
       });
-      this.badgeTip.hide();
+      this.hideBadgeTip();
       this.badgesDone.visible = achievements.complete;
     };
     draw();
     achievements.onChange(draw);
   }
 
+  private hideBadgeTip() {
+    this.tappedBadge = -1;
+    for (const icon of this.badges.children) icon.scale.set(1);
+    this.badgeTip.hide();
+  }
+
   /** The "all collected" line and the hover card sit just under the badge row. */
   private placeBadgeExtras() {
     const { x, y } = this.badges.position;
-    this.badgesDone.position.set(x, y + 30);
-    this.badgeTip.position.set(x - 2, y + 20);
+    const scale = this.badges.scale.y;
+    this.badgesDone.position.set(x, y + 30 * scale);
+    this.badgeTip.position.set(x - 2 * scale, y + 20 * scale);
   }
 
   private trackKonami(event: KeyboardEvent) {
