@@ -28,6 +28,8 @@ export class Button extends Container {
   private readonly textView: Text;
   private readonly title?: string;
   private readonly shortcut?: string;
+  /** Widest the label may be before it is scaled down to stay inside the button. */
+  private readonly maxTextWidth: number;
   private _enabled = true;
 
   constructor({
@@ -81,6 +83,8 @@ export class Button extends Container {
       },
     });
     this.textView.anchor.set(0.5);
+    this.maxTextWidth = width - 20;
+    this.fitText();
     this.addChild(this.bg, this.textView);
 
     this.eventMode = 'static';
@@ -105,6 +109,7 @@ export class Button extends Container {
 
   set text(value: string) {
     this.textView.text = value;
+    this.fitText();
     this.updateAccessibleTitle();
   }
 
@@ -123,6 +128,12 @@ export class Button extends Container {
   override destroy(...args: Parameters<Container['destroy']>): void {
     gsap.killTweensOf(this.scale);
     super.destroy(...args);
+  }
+
+  /** Shrinks a label that would overflow (e.g. REVEAL in a wide display font); never enlarges. */
+  private fitText() {
+    this.textView.scale.set(1);
+    this.textView.scale.set(Math.min(1, this.maxTextWidth / this.textView.width));
   }
 
   private updateAccessibleTitle() {
