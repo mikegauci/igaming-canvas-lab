@@ -1,3 +1,8 @@
+/* Orbitron for the boot screen and the floor (the floor waits for these in floor/fonts.ts). */
+@import '@fontsource/orbitron/latin-500.css';
+@import '@fontsource/orbitron/latin-700.css';
+@import '@fontsource/orbitron/latin-900.css';
+
 :root {
   color-scheme: dark;
   --bg: #0b0b14;
@@ -77,4 +82,306 @@ dialog button {
   color: var(--bg);
   font-weight: 700;
   cursor: pointer;
+}
+
+/* Boot screen while Pixi and the floor load: a synthwave horizon in plain CSS (src/loader.ts). */
+@property --p {
+  syntax: '<integer>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.loader {
+  --p: 0;
+  --creep: 6s;
+  --horizon: 58%;
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  background: #07020f;
+  font-family: Orbitron, system-ui, sans-serif;
+  transition: --p var(--creep) cubic-bezier(0.05, 0.7, 0.2, 1);
+  animation: loader-flicker 4s steps(1) infinite;
+}
+
+/* Scanlines and a vignette over everything, like glass on a CRT. */
+.loader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+.loader-sky {
+  position: absolute;
+  inset: 0 0 calc(100% - var(--horizon));
+  overflow: hidden;
+  background: linear-gradient(#07020f 0%, #1a0533 45%, #4a0d4f 80%, #ff3ea5 100%);
+}
+
+/* Stars: a few tiled dot patterns at different sizes, so the repeat isn't obvious. */
+.loader-sky::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 30%;
+  background:
+    radial-gradient(1.5px 1.5px at 23px 41px, #fff, transparent) 0 0 / 173px 149px,
+    radial-gradient(1px 1px at 97px 13px, #fff, transparent) 0 0 / 211px 127px,
+    radial-gradient(1px 1px at 51px 88px, #c9f6ff, transparent) 0 0 / 137px 191px,
+    radial-gradient(2px 2px at 140px 60px, #ffd6ef, transparent) 0 0 / 293px 233px;
+  mask: linear-gradient(#000, transparent);
+  animation: loader-twinkle 3s ease-in-out infinite alternate;
+}
+
+/* The striped sun sinking into the horizon. */
+.loader-sun {
+  position: absolute;
+  left: 50%;
+  bottom: -10vmin;
+  width: 48vmin;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: linear-gradient(#ffe95e 10%, #ff9a3d 45%, #ff3ea5 75%);
+  box-shadow: 0 0 60px 10px rgba(255, 62, 165, 0.45);
+  mask: linear-gradient(
+    #000 0 50%,
+    transparent 50% 53%,
+    #000 53% 60%,
+    transparent 60% 64%,
+    #000 64% 70%,
+    transparent 70% 75%,
+    #000 75% 80%,
+    transparent 80% 86%,
+    #000 86% 90%,
+    transparent 90%
+  );
+}
+
+.loader-floor {
+  position: absolute;
+  inset: var(--horizon) 0 0;
+  overflow: hidden;
+  background: linear-gradient(#2a0838, #07020f 70%);
+  perspective: 200px;
+  perspective-origin: 50% 0;
+  border-top: 2px solid #ff3ea5;
+  box-shadow: 0 -4px 24px rgba(255, 62, 165, 0.8);
+}
+
+/*
+ * A tall plane hinged at the bottom of the screen and tipped back until its far edge meets the
+ * horizon. It scrolls toward the viewer by one cell per loop, so the loop never jumps.
+ */
+.loader-grid {
+  position: absolute;
+  inset: auto -150% 0;
+  height: 600%;
+  transform-origin: 50% 100%;
+  transform: rotateX(80deg);
+  background:
+    linear-gradient(90deg, rgba(255, 62, 165, 0.8) 2px, transparent 2px) 50% 0 / 48px 48px,
+    linear-gradient(rgba(255, 62, 165, 0.8) 2px, transparent 2px) 0 0 / 48px 48px;
+  mask: linear-gradient(transparent, #000 60%);
+  animation: loader-grid 0.8s linear infinite;
+}
+
+.loader-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+/* The bar and status lie on the grid below the horizon. */
+.loader-meter {
+  position: absolute;
+  top: calc(var(--horizon) + 9vh);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+/*
+ * Chrome lettering standing on the horizon: sky above its own horizon line, sunset below it, plus
+ * a neon edge.
+ */
+.loader-title {
+  position: absolute;
+  bottom: calc(100% - var(--horizon) + 5vh);
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+  font-weight: 900;
+  font-size: clamp(2.6rem, 11vw, 6.5rem);
+  letter-spacing: 0.04em;
+  background: linear-gradient(
+    #fff 0%,
+    #b9f4ff 30%,
+    #2a6cff 49%,
+    #fff 50%,
+    #ffc1e6 62%,
+    #ff3ea5 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 14px rgba(255, 62, 165, 0.85));
+}
+
+.loader-title span {
+  font-size: 0.42em;
+  letter-spacing: 0.32em;
+  margin-top: 0.35em;
+  padding-left: 0.32em;
+}
+
+.loader-bar {
+  width: min(420px, 78vw);
+  height: 18px;
+  padding: 3px;
+  border: 2px solid #3ef0ff;
+  border-radius: 3px;
+  background: rgba(7, 2, 15, 0.7);
+  box-shadow:
+    0 0 12px rgba(62, 240, 255, 0.6),
+    inset 0 0 8px rgba(62, 240, 255, 0.35);
+}
+
+/* Segmented fill, like an old cassette-deck meter. */
+.loader-fill {
+  height: 100%;
+  transform-origin: left;
+  transform: scaleX(calc(var(--p) / 100));
+  background: repeating-linear-gradient(90deg, #3ef0ff 0 10px, transparent 10px 13px);
+  filter: drop-shadow(0 0 6px #3ef0ff);
+}
+
+.loader-status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  color: #3ef0ff;
+  font-size: clamp(0.7rem, 2.4vw, 0.85rem);
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 8px rgba(62, 240, 255, 0.8);
+}
+
+.loader-cursor {
+  width: 0.6em;
+  height: 1em;
+  margin-left: -0.4em;
+  background: currentColor;
+  animation: loader-blink 1s steps(1) infinite;
+}
+
+.loader-pct {
+  min-width: 3.5em;
+  text-align: right;
+  counter-reset: p var(--p);
+}
+
+.loader-pct::after {
+  content: counter(p) '%';
+}
+
+.loader.failed {
+  cursor: pointer;
+}
+
+.loader.failed .loader-status {
+  color: #ff3ea5;
+  text-shadow: 0 0 8px rgba(255, 62, 165, 0.8);
+}
+
+.loader.failed .loader-grid {
+  animation-play-state: paused;
+}
+
+/* Switch-off: the picture collapses to a bright line, then to a dot, then goes dark. */
+.loader.off {
+  animation: loader-off 450ms ease-in forwards;
+}
+
+@keyframes loader-grid {
+  to {
+    background-position:
+      50% 48px,
+      0 48px;
+  }
+}
+
+@keyframes loader-twinkle {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes loader-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes loader-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  41% {
+    opacity: 0.94;
+  }
+  42% {
+    opacity: 1;
+  }
+  77% {
+    opacity: 0.97;
+  }
+}
+
+@keyframes loader-off {
+  0% {
+    transform: none;
+    filter: none;
+  }
+  55% {
+    transform: scale(1, 0.006);
+    filter: brightness(4);
+  }
+  85% {
+    transform: scale(0.004, 0.006);
+    filter: brightness(6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0, 0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader,
+  .loader-sky::before,
+  .loader-grid,
+  .loader-cursor {
+    animation: none;
+  }
+
+  .loader.off {
+    animation: loader-fade 200ms ease-out forwards;
+  }
+}
+
+@keyframes loader-fade {
+  to {
+    opacity: 0;
+  }
 }

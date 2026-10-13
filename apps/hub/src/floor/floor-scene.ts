@@ -24,7 +24,7 @@ export interface FloorSceneOptions {
   achievements: Achievements;
   sounds: SoundManager;
   coinTexture: Texture;
-  /** Plays the short boot animation (first visit of the session). */
+  /** Shows the short boot animation (first visit of the session); it runs on startIntro(). */
   intro: boolean;
   /** Called with the game's path once the zoom-in has covered the screen. */
   navigate: (path: string) => void;
@@ -91,6 +91,7 @@ export class FloorScene extends Scene {
   /** How far the last gesture travelled, so a swipe that ends on a cabinet isn't a tap. */
   private lastDragDistance = 0;
   private introActive = false;
+  private introTimeline?: gsap.core.Timeline;
   private pointerParallax = 0;
   private time = 0;
   private launching = false;
@@ -286,6 +287,12 @@ export class FloorScene extends Scene {
     }
   }
 
+  /** Runs the boot animation set up in the constructor, if there is one. */
+  startIntro(): void {
+    // A key pressed during loading may already have skipped it.
+    if (this.introActive) this.introTimeline?.play();
+  }
+
   private get achievementsComplete(): boolean {
     return this.options.achievements.complete;
   }
@@ -460,7 +467,7 @@ export class FloorScene extends Scene {
     }
   }
 
-  /** "INSERT COIN" boot: under 1.5 s, skippable with any key or tap. */
+  /** "INSERT COIN" boot: under 1.5 s, skippable with any key or tap. Paused until startIntro(). */
   private playIntro() {
     const { introLayer } = this;
     const bg = new Graphics().rect(0, 0, 4000, 4000).fill(colors.bg);
@@ -501,13 +508,14 @@ export class FloorScene extends Scene {
       });
     };
     const tl = gsap
-      .timeline({ onComplete: finish })
+      .timeline({ paused: true, onComplete: finish })
       .call(place)
       .to(insert, { alpha: 0.2, duration: 0.12, yoyo: true, repeat: 3 })
       .call(() => this.options.sounds.play('coin'))
       .to(insert, { alpha: 0, duration: 0.1 })
       .to(start, { alpha: 1, duration: 0.1 })
       .to(start.scale, { x: 1.15, y: 1.15, duration: 0.25, yoyo: true, repeat: 1 });
+    this.introTimeline = tl;
     introLayer.on('pointertap', finish);
     window.addEventListener('keydown', finish, { once: true });
   }

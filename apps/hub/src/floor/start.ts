@@ -7,14 +7,18 @@ import { Quality } from './quality';
 const INTRO_KEY = 'lab:intro-seen';
 
 export interface FloorHandle {
-  pause(): void;
-  resume(): void;
+  /** Plays the boot animation, if this visit has one; call once the floor is on screen. */
+  startIntro(): void;
 }
 
-/** Boots Pixi and the Casino Floor into `parent`. Loaded on demand. */
+/**
+ * Boots Pixi and the Casino Floor into `parent`. Loaded on demand. `onBooted` fires once Pixi and
+ * the fonts are ready, before the scene is built.
+ */
 export async function startFloor(
   parent: HTMLElement,
   openContact: () => void,
+  onBooted?: () => void,
 ): Promise<FloorHandle> {
   const quality = Quality.fromEnvironment();
   const [game] = await Promise.all([
@@ -28,6 +32,7 @@ export async function startFloor(
     }),
     loadFonts(),
   ]);
+  onBooted?.();
   // elapsedMS is the raw frame time (deltaMS is clamped); hidden tabs are throttled, not slow.
   game.app.ticker.add((ticker) => {
     if (!document.hidden) quality.sample(ticker.elapsedMS);
@@ -87,7 +92,6 @@ export async function startFloor(
   await game.scenes.change(scene, { fade: intro ? 0 : 0.3 });
 
   return {
-    pause: () => game.app.ticker.stop(),
-    resume: () => game.app.ticker.start(),
+    startIntro: () => scene.startIntro(),
   };
 }
