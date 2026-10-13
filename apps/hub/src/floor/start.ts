@@ -1,6 +1,8 @@
 import { Achievements, colors, createGame, SoundManager, Wallet } from '@lab/core';
 import { Container, Graphics, Rectangle } from 'pixi.js';
 import { FloorScene } from './floor-scene';
+import { loadFonts } from './fonts';
+import { Quality } from './quality';
 
 const INTRO_KEY = 'lab:intro-seen';
 
@@ -14,11 +16,25 @@ export async function startFloor(
   parent: HTMLElement,
   openContact: () => void,
 ): Promise<FloorHandle> {
-  const game = await createGame({
-    parent,
-    designWidth: 1280,
-    designHeight: 720,
-    portrait: { width: 720, height: 1280 },
+  const quality = Quality.fromEnvironment();
+  const [game] = await Promise.all([
+    createGame({
+      parent,
+      designWidth: 1280,
+      designHeight: 720,
+      portrait: { width: 720, height: 1280 },
+      maxResolution: quality.settings.maxResolution,
+      debugInfo: () => `quality ${quality.tier}`,
+    }),
+    loadFonts(),
+  ]);
+  // elapsedMS is the raw frame time (deltaMS is clamped); hidden tabs are throttled, not slow.
+  game.app.ticker.add((ticker) => {
+    if (!document.hidden) quality.sample(ticker.elapsedMS);
+  });
+  quality.onChange(({ maxResolution }) => {
+    const { renderer, screen } = game.app;
+    renderer.resize(screen.width, screen.height, Math.min(window.devicePixelRatio, maxResolution));
   });
 
   const sounds = new SoundManager();

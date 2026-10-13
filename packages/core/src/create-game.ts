@@ -15,6 +15,8 @@ export interface GameOptions {
   maxResolution?: number;
   /** Shows FPS and draw calls. Defaults to on when the URL has `?debug=1`. */
   debug?: boolean;
+  /** Extra lines for the debug panel, e.g. the current quality tier. */
+  debugInfo?: () => string;
 }
 
 export interface Game {
@@ -37,6 +39,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     background = '#0b0b14',
     maxResolution = 2,
     debug = debugFromQuery(),
+    debugInfo,
   } = options;
 
   const app = new Application();
@@ -78,7 +81,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   const onVisibility = () => (document.hidden ? app.ticker.stop() : app.ticker.start());
   document.addEventListener('visibilitychange', onVisibility);
 
-  const detachDebug = debug ? attachDebugOverlay(app) : undefined;
+  const detachDebug = debug ? attachDebugOverlay(app, debugInfo) : undefined;
 
   return {
     app,
