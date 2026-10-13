@@ -4,7 +4,7 @@ Five small casino games built with **PixiJS v8 + TypeScript**, behind a playable
 page. Every round is decided by a (mock) server and only animated by the client, the game maths
 is unit-tested, and every game works in portrait and landscape.
 
-**Live:** <https://igaming-canvas-lab.vercel.app> (add `?view=classic` for a plain list)
+**Live:** <https://igaming-canvas-lab.vercel.app>
 
 | Game                                                           | Shows                                                               |
 | -------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -38,7 +38,7 @@ flowchart LR
 
 ```
 packages/core   shared engine; `@lab/core/logic` is the Pixi-free part that tests import
-apps/hub        the Casino Floor landing page (and the classic HTML list)
+apps/hub        the Casino Floor landing page (plus a hidden HTML list of the games for crawlers)
 apps/<game>     one Vite app per game, served at /<game>/; maths in src/logic, Pixi in src/view
 scripts/        assemble.mjs merges every app build into dist/ for Vercel
 ```
@@ -83,8 +83,8 @@ because cash-outs are judged on the server's clock while the round is running.
   strokes it paints into the `RenderTexture`.
 - **Work moved out of the frame.** RTP and odds are computed at build time (Vite `define`). The
   ticker pauses on hidden tabs, and resolution is capped at 2×.
-- **Light first load.** Each game loads 154–160 KB of gzipped JS. The landing page loads Pixi
-  only for the arcade view: 1.7 KB of JS for the classic list, 210 KB for the arcade.
+- **Light first load.** Each game loads 154–160 KB of gzipped JS. The landing page loads
+  Pixi on demand: about 210 KB of gzipped JS for the arcade.
 - **Measured.** `?debug=1` on any page shows FPS, WebGL draw calls per frame (about 9–21 in
   the games, about 40 on the arcade floor) and node count.
 
@@ -109,7 +109,6 @@ CI (GitHub Actions) runs typecheck, lint, tests and the full build on every push
 | `?debug=1`              | any page | FPS, draw calls and node count overlay             |
 | `?seed=123`             | any game | replays the same sequence of rounds                |
 | `?demo=big\|mega\|epic` | bonus    | every pick lands that win tier (says so on screen) |
-| `?view=classic\|arcade` | hub      | forces the plain list or the Casino Floor          |
 
 ## Mini Slot (`apps/slot`)
 
@@ -222,10 +221,8 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 - **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
   `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
   floor, and earning all five lights the HIRE ME sign, which opens the contact panel at any time.
-- **Classic view.** A plain HTML list of the games is always in the page for search engines,
-  link previews and screen readers. It's the default for `prefers-reduced-motion` and one click
-  away otherwise. Pixi and the floor are loaded only when the arcade is shown: the classic view
-  needs 1.7 KB of JavaScript, the arcade 210 KB (gzipped).
+- **Crawler-friendly.** A plain HTML list of the games is always in the page, visually hidden,
+  for search engines, link previews and screen readers.
 - **Easter egg.** The Konami code makes it rain coins.
 
 ## Development
