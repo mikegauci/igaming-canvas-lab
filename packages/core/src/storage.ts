@@ -5,18 +5,24 @@ export interface KeyValueStore {
 }
 
 /** localStorage, but never throws (private mode, blocked site data, SSR). */
-export function localStore(): KeyValueStore {
+export const localStore = (): KeyValueStore => webStore(() => window.localStorage);
+
+/** sessionStorage, but never throws: same reasons as localStore(). */
+export const sessionStore = (): KeyValueStore => webStore(() => window.sessionStorage);
+
+/** Even reading `window.localStorage` can throw when site data is blocked, hence the getter. */
+function webStore(storage: () => Storage): KeyValueStore {
   return {
     get(key) {
       try {
-        return window.localStorage.getItem(key);
+        return storage().getItem(key);
       } catch {
         return null;
       }
     },
     set(key, value) {
       try {
-        window.localStorage.setItem(key, value);
+        storage().setItem(key, value);
       } catch {
         // Persistence is a nicety; the game keeps working without it.
       }

@@ -11,7 +11,7 @@ export {
   type RoundResult,
 } from './outcome';
 export { Wallet, formatCredits, type WalletOptions, type WalletState } from './wallet';
-export { localStore, memoryStore, type KeyValueStore } from './storage';
+export { localStore, memoryStore, sessionStore, type KeyValueStore } from './storage';
 export { renderWav, type Tone } from './synth';
 export { countUpSeconds } from './presentation';
 export { Achievements, ACHIEVEMENTS, type AchievementId } from './achievements';

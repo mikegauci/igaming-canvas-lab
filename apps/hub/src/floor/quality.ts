@@ -107,8 +107,12 @@ export class Quality {
     return TIERS[this.current];
   }
 
-  onChange(listener: (settings: QualitySettings) => void): void {
+  onChange(listener: (settings: QualitySettings) => void): () => void {
     this.listeners.push(listener);
+    return () => {
+      const index = this.listeners.indexOf(listener);
+      if (index >= 0) this.listeners.splice(index, 1);
+    };
   }
 
   /** Feed one frame's raw duration (ticker.elapsedMS; deltaMS is clamped by Pixi). */
