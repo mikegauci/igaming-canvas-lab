@@ -10,9 +10,10 @@ import {
   type Viewport,
   type Wallet,
 } from '@lab/core';
-import type { Renderer, Ticker } from 'pixi.js';
+import type { Renderer, Texture, Ticker } from 'pixi.js';
 import { AUTO_TARGETS, multiplierAt, toCents, type AutoTarget } from './logic/crash';
 import type { MockCrashServer } from './logic/server';
+import { CrashCabinet } from './view/cabinet';
 import { CrashChart } from './view/chart';
 import { HistoryBar } from './view/history';
 
@@ -34,6 +35,7 @@ const MILESTONES = [2, 5, 10, 20, 50, 100];
 const RESULT_PAUSE_MS = 1400;
 
 export interface CrashSceneOptions {
+  artwork: Texture;
   renderer: Renderer;
   wallet: Wallet;
   sounds: SoundManager;
@@ -61,11 +63,13 @@ export class CrashScene extends Scene {
     label: 'AUTO: OFF',
     title: 'Auto cash-out target',
     shortcut: 'A',
-    width: 200,
-    height: 52,
-    fontSize: 20,
+    width: 196,
+    height: 46,
+    fontSize: 16,
     color: colors.cyan,
+    appearance: 'arcade',
   });
+  private readonly cabinet: CrashCabinet;
   private autoIndex = 0;
   private roundId: string | null = null;
   private bet = 0;
@@ -75,7 +79,7 @@ export class CrashScene extends Scene {
   private unbindAuto: (() => void) | null = null;
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor({ renderer, wallet, sounds, server }: CrashSceneOptions) {
+  constructor({ artwork, renderer, wallet, sounds, server }: CrashSceneOptions) {
     super();
     this.wallet = wallet;
     this.sounds = sounds;
@@ -86,15 +90,21 @@ export class CrashScene extends Scene {
       wallet,
       sounds,
       actionLabel: ACTION_LABELS.idle,
-      actionSize: 96,
-      actionWidth: 220,
-      panelWidth: 400,
+      actionSize: 84,
+      actionWidth: 196,
+      panelWidth: 560,
+      appearance: 'arcade',
     });
     this.hud.onAction = () => this.onAction();
-    this.chart = new CrashChart(renderer, 820, 470);
+    this.chart = new CrashChart(renderer, 830, 396);
     this.autoButton.onPress = () => this.cycleAuto();
+    this.cabinet = new CrashCabinet(artwork);
+    this.hud.message.style.fontSize = 16;
+    this.hud.message.style.wordWrap = true;
+    this.hud.message.style.align = 'center';
+    this.hud.betCaption.style.fontSize = 11;
 
-    this.addChild(this.chart, this.history, this.autoButton, this.hud);
+    this.addChild(this.cabinet, this.chart, this.history, this.autoButton, this.hud);
     this.round.onChange((state) => {
       this.hud.action.text = ACTION_LABELS[state];
       this.hud.action.enabled = state === 'idle' || state === 'flying';
@@ -129,32 +139,41 @@ export class CrashScene extends Scene {
       }
     }
     this.chart.update(seconds);
+    this.cabinet.update(seconds);
   }
 
-  override resize({ width, height, orientation }: Viewport): void {
-    const { hud } = this;
+  override resize(viewport: Viewport): void {
+    const { width, height, orientation } = viewport;
+    const { hud, chart } = this;
+    hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
+    hud.betCaption.visible = orientation === 'landscape';
     if (orientation === 'landscape') {
-      this.chart.setSize(820, 470);
-      this.chart.position.set(40, 96);
-      this.history.position.set(48, 582);
-      const column = 1062;
-      hud.placeHeader(column, 70);
-      hud.placeControls(column, 290, { spread: 150 });
-      this.autoButton.position.set(column, 410);
-      hud.panel.position.set(column - hud.panelWidth / 2, height - 92);
-      hud.mute.position.set(width - 48, 44);
-      hud.music.position.set(width - 116, 44);
+      chart.setSize(830, 396);
+      chart.position.set(60, 176);
+      this.history.position.set(68, 594);
+      const cx = chart.x + chart.size.width / 2;
+      const column = 1060;
+      hud.placeHeader(cx, 95);
+      hud.message.position.set(column, 217);
+      hud.placeControls(column, 300, { stacked: true });
+      this.autoButton.position.set(column, 506);
+      hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
+      hud.mute.position.set(width - 54, 44);
+      hud.music.position.set(width - 122, 44);
+      this.cabinet.arrange(viewport, cx, 157, { x: 944, y: 242, width: 232, height: 342 });
     } else {
       const cx = width / 2;
-      hud.placeHeader(cx, 70);
-      this.chart.setSize(680, 480);
-      this.chart.position.set(20, 150);
-      this.history.position.set(28, 648);
-      hud.placeControls(cx, 780, { spread: 190 });
-      this.autoButton.position.set(cx, 900);
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
-      hud.mute.position.set(width - 50, 60);
-      hud.music.position.set(width - 118, 60);
+      chart.setSize(660, 500);
+      chart.position.set(cx - 330, 250);
+      this.history.position.set(cx - this.history.width / 2, 765);
+      hud.placeHeader(cx, 143);
+      hud.message.position.set(cx, 212);
+      hud.placeControls(cx, 890, { spread: 207 });
+      this.autoButton.position.set(cx, 968);
+      hud.panel.position.set(cx - hud.panelWidth / 2, 1070);
+      hud.mute.position.set(width - 57, 51);
+      hud.music.position.set(width - 125, 51);
+      this.cabinet.arrange(viewport, cx, 812, { x: 65, y: 830, width: 590, height: 222 });
     }
   }
 
