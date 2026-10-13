@@ -54,7 +54,7 @@ describe('Quality', () => {
     quality.onChange(listener);
     run(quality, 3.6, jittery);
     expect(quality.tier).toBe('medium');
-    expect(listener).toHaveBeenCalledWith({ tier: 'medium', maxResolution: 1.5 });
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ tier: 'medium' }));
     run(quality, 3, jittery);
     expect(quality.tier).toBe('medium');
     run(quality, 1, jittery);

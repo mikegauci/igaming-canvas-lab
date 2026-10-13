@@ -216,6 +216,18 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 
 - **Attract mode.** Each cabinet's screen loops a tiny preview of its game: spinning reels, a
   coasting wheel, a foil wipe, a crash curve, a bouncing mascot.
+- **Cabinets drawn in code.** Gradient shells edged with a neon tube (glow, halo and a white-hot
+  core), lit marquees with chasing bulbs, joysticks, buttons and coin doors, and a pool of light
+  with tube reflections on the grid. The selected cabinet lifts, its bulbs chase faster and its
+  tube buzzes now and then.
+- **CRT screens** (`floor/crt-filter.ts`): one shared filter adds barrel curvature, scanlines, a
+  rolling bright band, edge chromatic aberration and a vignette. `filterArea` pins it to the tube,
+  however far the attract art pokes out. Its vertex shader passes the frame mapping as varyings,
+  so the fragment shader never redeclares Pixi's frame uniforms; shared uniforms must have the
+  same precision in both stages, and Pixi gives the stages different defaults. Off on the low
+  quality tier.
+- **Into the game.** Clicking zooms into the screen, which then switches off like a CRT: a white
+  frame collapses to a line, then a dot, with a synthesized whine and click.
 - **Synthwave horizon in GLSL.** The sky and the floor are one shader quad each
   (`floor/synthwave-shaders.ts`). The sky draws a dusk gradient, twinkling hashed stars and a
   striped sun whose bands slide into the horizon. The floor draws an endless neon grid that

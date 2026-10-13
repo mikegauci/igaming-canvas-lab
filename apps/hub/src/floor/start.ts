@@ -53,6 +53,11 @@ export async function startFloor(
       { freq: 1319, duration: 0.25, delay: 0.07, wave: 'square', volume: 0.12 },
     ],
     zoom: [{ freq: 200, to: 1200, duration: 0.5, wave: 'triangle', volume: 0.18 }],
+    // A CRT switching off: a falling whine and a click.
+    off: [
+      { freq: 1800, to: 300, duration: 0.18, wave: 'sine', volume: 0.08 },
+      { freq: 0, duration: 0.03, delay: 0.16, wave: 'noise', volume: 0.08 },
+    ],
     // Neon tube striking: a mains hum with a crackle.
     buzz: [
       { freq: 100, duration: 0.45, wave: 'saw', volume: 0.05 },
@@ -88,6 +93,7 @@ export async function startFloor(
     sounds,
     coinTexture,
     intro,
+    quality,
     navigate: (path) => window.location.assign(path),
     openContact,
   });
