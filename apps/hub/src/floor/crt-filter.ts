@@ -18,10 +18,13 @@ uniform float uTime;
 void main() {
   vec2 toTexture = vFrame.xy;
   vec2 uv = vUv;
+  // The cabinet's alpha (the intro fades it in) arrives premultiplied in the input: keep it, or
+  // the tube would show as an opaque black box on a cabinet that is still invisible.
+  float coverage = texture(uTexture, uv * toTexture).a;
   vec2 centred = uv - 0.5;
   vec2 bent = uv + centred * dot(centred, centred) * 0.22;
   if (bent.x < 0.0 || bent.y < 0.0 || bent.x > 1.0 || bent.y > 1.0) {
-    finalColor = vec4(0.0, 0.0, 0.0, 1.0);
+    finalColor = vec4(0.0, 0.0, 0.0, coverage);
     return;
   }
 
@@ -35,8 +38,8 @@ void main() {
   float scan = 0.78 + 0.22 * sin(bent.y * vFrame.z * 2.094);
   float roll = smoothstep(0.0, 0.12, 0.12 - abs(fract(bent.y - uTime * 0.18) - 0.5)) * 0.12;
   float vignette = 1.0 - dot(centred, centred) * 1.4;
-  colour.rgb = colour.rgb * scan * vignette + roll;
-  finalColor = vec4(colour.rgb, 1.0);
+  colour.rgb = colour.rgb * scan * vignette + roll * coverage;
+  finalColor = vec4(colour.rgb, coverage);
 }
 `;
 
