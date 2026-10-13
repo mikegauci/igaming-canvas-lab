@@ -10,12 +10,13 @@ const contact = document.getElementById('contact') as HTMLDialogElement;
 document.getElementById('contact-open')?.addEventListener('click', () => contact.showModal());
 contact.querySelector('[data-close]')?.addEventListener('click', () => contact.close());
 
-// Milestones: the floor's code (Pixi is most of it), then Pixi and the fonts, then the scene.
+// Milestones: the floor's code (Pixi is most of it), then Pixi, the fonts and the cabinet art,
+// then the scene.
 progress(60, 6);
 import('./floor/start')
   .then(({ startFloor }) => {
     progress(85, 3);
-    return startFloor(stage, () => progress(95, 2));
+    return startFloor(stage, (done) => progress(Math.round(85 + done * 10), 2));
   })
   .then(async (floor) => {
     await finish();

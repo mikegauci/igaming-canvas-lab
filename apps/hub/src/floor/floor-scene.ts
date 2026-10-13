@@ -18,7 +18,7 @@ import { BadgeTip } from './badge-tip';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
 import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
-import { GAMES } from './games';
+import { GAMES, type GameInfo } from './games';
 import { NeonIconButton, pulseGlyph, speakerGlyph } from './icon-button';
 import { NeonTitle, neonStyle, strike } from './neon';
 import type { Quality, QualitySettings } from './quality';
@@ -28,6 +28,8 @@ export interface FloorSceneOptions {
   achievements: Achievements;
   sounds: SoundManager;
   coinTexture: Texture;
+  /** Each cabinet's front artwork, preloaded; a missing one leaves that cabinet's panels plain. */
+  cabinetArt: Partial<Record<GameInfo['id'], Texture>>;
   /** Soft glow dot for the drifting motes. */
   moteTexture: Texture;
   /** Turns the cabinets' CRT pass on or off with the quality tier. */
@@ -54,6 +56,9 @@ const KONAMI = [
 ];
 const SWIPE_THRESHOLD = 50;
 const SELECTED_KEY = 'lab:floor-selected';
+/** Portrait layout: where the carousel dots sit, and the bottom of the HUD (title, badges). */
+const DOTS_FROM_BOTTOM = 190;
+const HUD_BOTTOM = 260;
 
 /**
  * The Casino Floor: a synthwave arcade with one cabinet per game. Nothing to learn: hover
@@ -109,7 +114,7 @@ export class FloorScene extends Scene {
     const { wallet, achievements, sounds, coinTexture } = options;
 
     this.cabinets = GAMES.map((game, i) => {
-      const cabinet = new Cabinet(game);
+      const cabinet = new Cabinet(game, options.cabinetArt[game.id] ?? null);
       cabinet.onSelect = () => this.select(i);
       cabinet.onPlay = () => this.activate(i);
       return cabinet;
@@ -247,11 +252,14 @@ export class FloorScene extends Scene {
       this.hint.text = 'HOVER TO PREVIEW · CLICK TO PLAY · ← → TO BROWSE';
       this.dots.clear();
     } else {
-      const ground = 870 + CABINET_HEIGHT * 0.5;
+      // The cabinets stand just above the carousel dots, but never so low on a short screen
+      // that their marquees run into the HUD.
+      const scale = 1.5;
+      const ground = Math.max(HUD_BOTTOM + CABINET_HEIGHT * scale, height - DOTS_FROM_BOTTOM - 50);
       const spacing = 380;
       this.backdrop.build(width, height, 600, ground, spacing * (GAMES.length - 1));
       this.cabinets.forEach((cabinet, i) => {
-        cabinet.scale.set(1.5);
+        cabinet.scale.set(scale);
         cabinet.position.set(width / 2 + i * spacing, ground);
       });
       this.title.layout(0.74);
@@ -425,7 +433,7 @@ export class FloorScene extends Scene {
     this.dots.clear();
     GAMES.forEach((game, i) => {
       const x = width / 2 + (i - (GAMES.length - 1) / 2) * 26;
-      this.dots.circle(x, height - 190, i === this.selected ? 7 : 5).fill({
+      this.dots.circle(x, height - DOTS_FROM_BOTTOM, i === this.selected ? 7 : 5).fill({
         color: i === this.selected ? game.color : colors.muted,
         alpha: i === this.selected ? 1 : 0.5,
       });

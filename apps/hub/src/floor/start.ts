@@ -1,7 +1,8 @@
 import { Achievements, colors, createGame, SoundManager, Wallet } from '@lab/core';
-import { Container, Graphics, Rectangle } from 'pixi.js';
+import { Assets, Container, Graphics, Rectangle, type Texture } from 'pixi.js';
 import { FloorScene } from './floor-scene';
 import { loadFonts } from './fonts';
+import { GAMES, type GameInfo } from './games';
 import { PostEffects } from './post';
 import { Quality } from './quality';
 
@@ -14,14 +15,24 @@ export interface FloorHandle {
 }
 
 /**
- * Boots Pixi and the Casino Floor into `parent`. Loaded on demand. `onBooted` fires once Pixi and
- * the fonts are ready, before the scene is built.
+ * Boots Pixi and the Casino Floor into `parent`. Loaded on demand. `onProgress` reports the share
+ * (0 to 1) of the boot work done so far: Pixi, the fonts and each cabinet's artwork. It reaches 1
+ * just before the scene is built.
  */
-export async function startFloor(parent: HTMLElement, onBooted?: () => void): Promise<FloorHandle> {
+export async function startFloor(
+  parent: HTMLElement,
+  onProgress?: (done: number) => void,
+): Promise<FloorHandle> {
+  const steps = GAMES.length + 2;
+  let done = 0;
+  const step = <T>(value: T): T => {
+    onProgress?.(++done / steps);
+    return value;
+  };
   const quality = Quality.fromEnvironment();
   // Post-processing needs the app, so the debug panel asks for its state through this.
   let describePost = () => 'post pending';
-  const [game] = await Promise.all([
+  const [game, cabinetArt] = await Promise.all([
     createGame({
       parent,
       designWidth: 1280,
@@ -29,10 +40,10 @@ export async function startFloor(parent: HTMLElement, onBooted?: () => void): Pr
       portrait: { width: 720, height: 1280 },
       maxResolution: quality.settings.maxResolution,
       debugInfo: () => `quality ${quality.tier} · ${describePost()}`,
-    }),
-    loadFonts(),
+    }).then(step),
+    loadCabinetArt(() => step(undefined)),
+    loadFonts().then(step),
   ]);
-  onBooted?.();
   // elapsedMS is the raw frame time (deltaMS is clamped); hidden tabs are throttled, not slow.
   game.app.ticker.add((ticker) => {
     if (!document.hidden) quality.sample(ticker.elapsedMS);
@@ -129,6 +140,7 @@ export async function startFloor(parent: HTMLElement, onBooted?: () => void): Pr
     sounds,
     coinTexture,
     moteTexture,
+    cabinetArt,
     intro,
     quality,
     navigate: (path) => window.location.assign(path),
@@ -144,4 +156,31 @@ export async function startFloor(parent: HTMLElement, onBooted?: () => void): Pr
   return {
     startIntro: () => scene.startIntro(),
   };
+}
+
+/**
+ * Loads every cabinet's front artwork once, before the cabinets are built, calling `onLoaded` as
+ * each one settles. The prints are scaled well down on screen, so they get mipmaps (asked for at
+ * load: the source sizes its mip chain when it's created). Artwork that fails to load is left
+ * out: that cabinet is drawn with plain panels rather than holding up the floor.
+ */
+async function loadCabinetArt(
+  onLoaded: () => void,
+): Promise<Partial<Record<GameInfo['id'], Texture>>> {
+  const entries = await Promise.all(
+    GAMES.map(async ({ id, art }) => {
+      try {
+        const texture = await Assets.load<Texture>({
+          src: art,
+          data: { autoGenerateMipmaps: true },
+        });
+        return [id, texture] as const;
+      } catch {
+        return [id, undefined] as const;
+      } finally {
+        onLoaded();
+      }
+    }),
+  );
+  return Object.fromEntries(entries.filter(([, texture]) => texture));
 }
