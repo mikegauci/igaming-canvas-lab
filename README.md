@@ -222,6 +222,10 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 - **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
   `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
   floor, and earning all five lights the HIRE ME sign, which opens the contact panel at any time.
+- **Boot screen.** While Pixi downloads, a synthwave horizon in plain HTML and CSS (striped sun,
+  scrolling perspective grid, chrome title, scanlines) shows real loading milestones, then
+  switches off like a CRT into the INSERT COIN intro. It costs no JavaScript beyond the hub's
+  entry script, and a failed load turns it into a retry button.
 - **Crawler-friendly.** A plain HTML list of the games is always in the page, visually hidden,
   for search engines, link previews and screen readers.
 - **Easter egg.** The Konami code makes it rain coins.
