@@ -33,6 +33,9 @@ class GradeFilter extends Filter {
     super({
       glProgram: GlProgram.from({ vertex: frameVertex, fragment: gradeFragment, name: 'grade' }),
       resources: { grade: { uTime: { value: 0, type: 'f32' } } },
+      // Filters default to resolution 1, and a filtered container renders at its filters' lowest
+      // resolution: on a 3× phone that drew the whole floor at a third of its pixels.
+      resolution: 'inherit',
     });
   }
 
@@ -43,8 +46,8 @@ class GradeFilter extends Filter {
 
 /**
  * Full-screen post-processing on the stage: bloom, so every neon tube and the sun actually glow
- * onto what's around them, then the vignette-and-grain grade. Bloom runs at full resolution on the
- * high tier and half on medium; the low tier skips both.
+ * onto what's around them, then the vignette-and-grain grade. Both run at the screen's resolution
+ * so the floor stays sharp; medium takes fewer blur passes and the low tier skips both.
  */
 export class PostEffects {
   private readonly bloom = new AdvancedBloomFilter({
@@ -61,6 +64,8 @@ export class PostEffects {
 
   constructor(app: Application) {
     this.app = app;
+    // Filters default to resolution 1: render at the screen's, so the floor isn't upscaled.
+    this.bloom.resolution = 'inherit';
     // Filter exactly the screen, not the stage's bounds (the backdrop bleeds far past them).
     app.stage.filterArea = app.screen;
     app.ticker.add((ticker) => {
@@ -69,18 +74,20 @@ export class PostEffects {
     });
   }
 
-  apply({ bloomResolution }: QualitySettings): void {
-    if (bloomResolution === 0) {
+  apply({ bloomPasses }: QualitySettings): void {
+    if (bloomPasses === 0) {
       this.app.stage.filters = [];
       return;
     }
-    this.bloom.resolution = bloomResolution;
+    this.bloom.quality = bloomPasses;
+    // The blur steps in texture pixels: scale them so the glow spans the same on any screen.
+    this.bloom.pixelSize = this.app.renderer.resolution;
     this.app.stage.filters = [this.bloom, this.grade];
   }
 
   /** Short description for the ?debug=1 panel. */
   describe(): string {
     const filters = this.app.stage.filters;
-    return filters && filters.length ? `bloom @${this.bloom.resolution}x + grade` : 'post off';
+    return filters && filters.length ? `bloom ×${this.bloom.quality} + grade` : 'post off';
   }
 }

@@ -45,6 +45,8 @@ export class CrtFilter extends Filter {
     super({
       glProgram: GlProgram.from({ vertex: frameVertex, fragment, name: 'crt-filter' }),
       resources: { crt: { uTime: { value: 0, type: 'f32' } } },
+      // Match the screen's pixel density; the default of 1 blurs the cabinet screens on phones.
+      resolution: 'inherit',
     });
   }
 
