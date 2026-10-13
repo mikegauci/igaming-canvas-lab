@@ -1,6 +1,7 @@
 import { createRng } from '@lab/core/logic';
 import { describe, expect, it } from 'vitest';
 import { createWheelEase } from './ease';
+import { pointerRotation } from './pointer';
 import {
   pegsPassed,
   segmentAtRotation,
@@ -50,27 +51,89 @@ describe('geometry', () => {
 });
 
 describe('createWheelEase', () => {
-  const ease = createWheelEase({ overshoot: 0.02 });
-
-  it('starts at 0, ends exactly on the target and peaks just past it', () => {
+  it.each([2, 3])('lands without reversing or crossing the target (power %i)', (power) => {
+    const ease = createWheelEase({ power });
     expect(ease(0)).toBe(0);
     expect(ease(1)).toBe(1);
-    const samples = Array.from({ length: 1001 }, (_, i) => ease(i / 1000));
-    expect(Math.max(...samples)).toBeCloseTo(1.02, 5);
+    let previous = 0;
+    for (let i = 0; i <= 1000; i++) {
+      const value = ease(i / 1000);
+      expect(value).toBeGreaterThanOrEqual(previous);
+      expect(value).toBeLessThanOrEqual(1);
+      previous = value;
+    }
+    expect(ease.slope(1)).toBe(0);
   });
 
-  it('only moves forwards until the peak, then only settles back', () => {
-    const samples = Array.from({ length: 1001 }, (_, i) => ease(i / 1000));
-    const peak = samples.indexOf(Math.max(...samples));
-    for (let i = 1; i <= peak; i++) expect(samples[i]!).toBeGreaterThanOrEqual(samples[i - 1]!);
-    for (let i = peak + 1; i < samples.length; i++) {
-      expect(samples[i]!).toBeLessThanOrEqual(samples[i - 1]!);
+  it.each([2, 3])('matches the free-spin and replanned STOP speeds (power %i)', (power) => {
+    const ease = createWheelEase({ power });
+    const speed = 9;
+    const travel = 10;
+    const duration = (travel * ease.initialSlope) / speed;
+    expect((travel * ease.slope(0)) / duration).toBeCloseTo(speed, 10);
+    const h = 1e-6;
+    expect(ease(h) / h).toBeCloseTo(ease.initialSlope, 3);
+    for (const progress of [0.1, 0.5, 0.8]) {
+      const currentSpeed = (travel * ease.slope(progress)) / duration;
+      const stopEase = createWheelEase({ power: 2 });
+      const stopTravel = 3;
+      const stopDuration = (stopTravel * stopEase.initialSlope) / currentSpeed;
+      expect((stopTravel * stopEase.slope(0)) / stopDuration).toBeCloseTo(currentSpeed, 10);
     }
   });
 
-  it('reports its starting slope so the spin speed can be matched', () => {
-    const h = 1e-6;
-    expect(ease(h) / h).toBeCloseTo(ease.initialSlope, 3);
+  it('never exits the final sector after its last peg, even at the landing offset limits', () => {
+    const w = segmentWidth(COUNT);
+    for (const power of [2, 3]) {
+      const ease = createWheelEase({ power });
+      for (let segment = 0; segment < COUNT; segment++) {
+        for (const offset of [-MAX_LANDING_OFFSET, 0, MAX_LANDING_OFFSET]) {
+          const from = -0.7;
+          const to = targetRotation(from, segment, offset, COUNT, 10);
+          const finalEdge = Math.floor(to / w) * w;
+          for (let i = 0; i <= 1000; i++) {
+            const rotation = from + (to - from) * ease(i / 1000);
+            if (rotation > finalEdge) expect(segmentAtRotation(rotation, COUNT)).toBe(segment);
+          }
+        }
+      }
+    }
+  });
+});
+
+describe('pointer contact', () => {
+  it('starts flexing on approach and stays pushed while the peg crosses the top', () => {
+    const approach = pointerRotation(-0.08, -0.04, COUNT, 0, 1 / 60);
+    const crossing = pointerRotation(-0.04, 0, COUNT, approach, 1 / 60);
+    const leaving = pointerRotation(0, 0.04, COUNT, crossing, 1 / 60);
+    expect(approach).toBeLessThan(0);
+    expect(crossing).toBeLessThan(approach);
+    expect(leaving).toBeLessThan(crossing);
+  });
+
+  it('tracks the same contact across positive and negative full turns', () => {
+    const contact = pointerRotation(-0.04, 0.02, COUNT, 0, 1 / 60);
+    for (const turns of [-5, -1, 1, 5]) {
+      expect(pointerRotation(turns * TAU - 0.04, turns * TAU + 0.02, COUNT, 0, 1 / 60)).toBeCloseTo(
+        contact,
+        10,
+      );
+    }
+  });
+
+  it('still flicks when a slow frame skips an entire peg contact', () => {
+    const rotation = pointerRotation(-0.1, 0.15, COUNT, 0, 1 / 30);
+    expect(rotation).toBeLessThan(0);
+    expect(rotation).toBeGreaterThan(-0.38);
+  });
+
+  it('returns home at the same rate regardless of frame rate', () => {
+    const released = pointerRotation(0.04, 0.08, COUNT, -0.3, 1 / 60);
+    const oneFrame = pointerRotation(0.08, 0.08, COUNT, released, 1 / 30);
+    const firstHalf = pointerRotation(0.08, 0.08, COUNT, released, 1 / 60);
+    const twoFrames = pointerRotation(0.08, 0.08, COUNT, firstHalf, 1 / 60);
+    expect(oneFrame).toBeCloseTo(twoFrames, 10);
+    expect(pointerRotation(0.08, 0.08, COUNT, released, 0.5)).toBe(0);
   });
 });
 
