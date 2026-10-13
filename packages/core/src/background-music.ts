@@ -1,6 +1,8 @@
 import { sessionStore, type KeyValueStore } from './storage';
 
-const TRACK_URL = new URL('./audio/icl-background-loop.wav', import.meta.url).href;
+// Served by the hub at a root URL (not bundled per app), so every page shares one cached download.
+// In dev the hub's proxy serves the games, so the same path works there too.
+const TRACK_URL = '/audio/icl-background-loop.flac';
 const POSITION_KEY = 'lab:music-position';
 const VOLUME = 0.28;
 
@@ -35,7 +37,7 @@ export class BackgroundMusic {
     this.wanted = true;
     try {
       // Fetch and decode only once, after audio unlock; music never holds up the page.
-      // The WAV's beat-aligned crossfade is baked in, with no encoder padding at the join.
+      // The FLAC's beat-aligned crossfade is baked in, with no encoder padding at the join.
       this.buffer ??= fetch(TRACK_URL).then(async (response) => {
         if (!response.ok) throw new Error(`Unable to load background music: ${response.status}`);
         return this.context.decodeAudioData(await response.arrayBuffer());
