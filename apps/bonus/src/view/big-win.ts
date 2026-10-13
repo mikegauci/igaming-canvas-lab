@@ -1,4 +1,4 @@
-import { colors, Confetti, fontFamily, formatCredits } from '@lab/core';
+import { type Bounds, colors, Confetti, fontFamily, formatCredits } from '@lab/core';
 import { gsap } from 'gsap';
 import { BitmapText, Container, Graphics, Text, type Texture } from 'pixi.js';
 import type { CountUpStep, TierName } from '../logic/tiers';
@@ -31,8 +31,9 @@ export class BigWinOverlay extends Container {
   /** Shows the end state directly (seeking skips the timeline's callbacks). */
   private showFinal: (() => void) | null = null;
   private rainCarry = 0;
-  private viewWidth = 0;
   private viewHeight = 0;
+  /** The whole window in design coordinates, so the dim and coin rain reach the letterbox bars. */
+  private screen: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
   constructor(coinTexture: Texture) {
     super();
@@ -78,10 +79,13 @@ export class BigWinOverlay extends Container {
     return this.timeline !== null;
   }
 
-  resize(width: number, height: number): void {
-    this.viewWidth = width;
+  resize(width: number, height: number, screen: Bounds): void {
     this.viewHeight = height;
-    this.dim.clear().rect(0, 0, width, height).fill({ color: colors.bg, alpha: 0.82 });
+    this.screen = screen;
+    this.dim
+      .clear()
+      .rect(screen.x, screen.y, screen.width, screen.height)
+      .fill({ color: colors.bg, alpha: 0.82 });
     this.rays.position.set(width / 2, height * 0.42);
     this.banner.position.set(width / 2, height * 0.38);
     this.counter.position.set(width / 2, height * 0.38 + 120);
@@ -160,8 +164,8 @@ export class BigWinOverlay extends Container {
       this.rainCarry -= 1;
       this.coins.burst({
         ...this.coinStyle(),
-        x: Math.random() * this.viewWidth,
-        y: -30,
+        x: this.screen.x + Math.random() * this.screen.width,
+        y: this.screen.y - 30,
         count: 1,
         angle: Math.PI / 2,
         spread: 0.3,
@@ -189,7 +193,7 @@ export class BigWinOverlay extends Container {
     );
     this.coins.burst({
       ...this.coinStyle(),
-      x: this.viewWidth / 2,
+      x: this.screen.x + this.screen.width / 2,
       y: this.viewHeight * 0.45,
       count: burst,
       angle: -Math.PI / 2,

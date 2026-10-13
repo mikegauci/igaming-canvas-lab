@@ -1,6 +1,6 @@
 // Bootstrapping and scenes
 export { createGame, type GameOptions, type Game } from './create-game';
-export { Scene, SceneManager, type Viewport, type ChangeOptions } from './scene';
+export { Scene, SceneManager, type Viewport, type Bounds, type ChangeOptions } from './scene';
 export { loadAssets, LoadingScene, type LoadOptions } from './assets';
 export { attachDebugOverlay } from './debug-overlay';
 export { onKey } from './input';

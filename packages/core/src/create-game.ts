@@ -57,10 +57,22 @@ export async function createGame(options: GameOptions): Promise<Game> {
   const root = new Container();
   app.stage.addChild(root);
 
-  const viewportFor = (width: number, height: number): Viewport =>
-    portrait && height > width
-      ? { width: portrait.width, height: portrait.height, orientation: 'portrait' }
-      : { width: designWidth, height: designHeight, orientation: 'landscape' };
+  const viewportFor = (width: number, height: number): Viewport => {
+    const design =
+      portrait && height > width
+        ? { width: portrait.width, height: portrait.height, orientation: 'portrait' as const }
+        : { width: designWidth, height: designHeight, orientation: 'landscape' as const };
+    const scale = Math.min(width / design.width, height / design.height);
+    const screenWidth = width / scale;
+    const screenHeight = height / scale;
+    const screen = {
+      x: (design.width - screenWidth) / 2,
+      y: (design.height - screenHeight) / 2,
+      width: screenWidth,
+      height: screenHeight,
+    };
+    return { ...design, screen };
+  };
 
   let viewport = viewportFor(app.screen.width, app.screen.height);
   const scenes = new SceneManager(root, app.ticker, viewport);
@@ -71,7 +83,13 @@ export async function createGame(options: GameOptions): Promise<Game> {
     const scale = Math.min(width / next.width, height / next.height);
     root.scale.set(scale);
     root.position.set((width - next.width * scale) / 2, (height - next.height * scale) / 2);
-    if (next.orientation !== viewport.orientation) {
+    // Re-lay out whenever the letterbox changes too, so full-screen layers keep covering it.
+    const { screen } = viewport;
+    if (
+      next.orientation !== viewport.orientation ||
+      next.screen.width !== screen.width ||
+      next.screen.height !== screen.height
+    ) {
       viewport = next;
       scenes.resize(viewport);
     }

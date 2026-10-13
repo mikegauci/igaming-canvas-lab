@@ -96,7 +96,12 @@ export class FloorScene extends Scene {
   /** The switch-off flash when a game launches: the picture collapses to a line, then a dot. */
   private readonly flash = new Graphics();
   private readonly introLayer = new Container();
-  private viewport: Viewport = { width: 1280, height: 720, orientation: 'landscape' };
+  private viewport: Viewport = {
+    width: 1280,
+    height: 720,
+    orientation: 'landscape',
+    screen: { x: 0, y: 0, width: 1280, height: 720 },
+  };
   private selected = 0;
   private cameraX = 0;
   private cameraTarget = 0;
