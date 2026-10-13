@@ -110,6 +110,8 @@ export class CrashChart extends Container {
   /** Visible axis ranges, eased towards their targets. */
   private tMax = 8;
   private mMax = 2;
+  /** The axes the grid was last drawn for, so a settled camera doesn't rebuild it each frame. */
+  private gridKey = '';
   private clock = 0;
 
   constructor(renderer: Renderer, width: number, height: number) {
@@ -310,8 +312,8 @@ export class CrashChart extends Container {
     const targetT = Math.max(8, this.elapsed * 1.25);
     const targetM = Math.max(2, 1 + (m - 1) * 1.35);
     const k = Math.min(1, deltaSeconds * CAMERA_EASE);
-    this.tMax += (targetT - this.tMax) * k;
-    this.mMax += (targetM - this.mMax) * k;
+    this.tMax = ease(this.tMax, targetT, k);
+    this.mMax = ease(this.mMax, targetM, k);
 
     // Stars stream past faster as the multiplier climbs.
     if (this.crashedAt === null) {
@@ -410,6 +412,9 @@ export class CrashChart extends Container {
   }
 
   private drawGrid() {
+    const key = `${this.tMax},${this.mMax},${this.chartWidth},${this.chartHeight}`;
+    if (key === this.gridKey) return;
+    this.gridKey = key;
     const g = this.grid.clear();
     const yStep = Y_STEPS.find((s) => (this.mMax - 1) / s <= TICKS) ?? Y_STEPS.at(-1)!;
     const xStep = X_STEPS.find((s) => this.tMax / s <= TICKS + 1) ?? X_STEPS.at(-1)!;
@@ -438,4 +443,10 @@ export class CrashChart extends Container {
     });
     g.stroke({ color: colors.cyan, width: 1, alpha: 0.12 });
   }
+}
+
+/** Eases `from` towards `to` by `k`, landing exactly once it's too close to see a difference. */
+function ease(from: number, to: number, k: number): number {
+  const next = from + (to - from) * k;
+  return Math.abs(to - next) < 1e-4 ? to : next;
 }

@@ -110,6 +110,10 @@ export class BonusScene extends Scene {
     this.hud.say('Pick a chest — 1, 2 or 3');
   }
 
+  override idle(): boolean {
+    return this.round.state === 'idle';
+  }
+
   override update(ticker: Ticker): void {
     this.overlay.update(ticker.deltaMS / 1000);
     this.cabinet.update(ticker.deltaMS / 1000);

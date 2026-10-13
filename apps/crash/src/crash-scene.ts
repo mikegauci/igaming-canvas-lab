@@ -117,6 +117,10 @@ export class CrashScene extends Scene {
     this.hud.say('Cash out before it crashes');
   }
 
+  override idle(): boolean {
+    return this.round.state === 'idle';
+  }
+
   override update(ticker: Ticker): void {
     const seconds = ticker.elapsedMS / 1000;
     const state = this.round.state;

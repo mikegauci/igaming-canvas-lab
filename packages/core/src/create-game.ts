@@ -1,5 +1,6 @@
 import { Application, Container } from 'pixi.js';
 import { attachDebugOverlay } from './debug-overlay';
+import { IdleThrottle } from './idle-throttle';
 import { SceneManager, type Viewport } from './scene';
 
 export interface GameOptions {
@@ -97,6 +98,13 @@ export async function createGame(options: GameOptions): Promise<Game> {
   app.renderer.on('resize', fit);
   fit();
 
+  // Between rounds, with no input, drop to a lower frame rate to save battery.
+  const throttle = new IdleThrottle(app.ticker, () => scenes.scene?.idle?.() ?? false);
+  app.ticker.add(() => throttle.tick());
+  const onInput = () => throttle.poke();
+  const inputEvents = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
+  for (const type of inputEvents) window.addEventListener(type, onInput, { passive: true });
+
   // Pause the ticker while the tab is hidden so animations don't jump on return.
   const onVisibility = () => (document.hidden ? app.ticker.stop() : app.ticker.start());
   document.addEventListener('visibilitychange', onVisibility);
@@ -122,6 +130,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     },
     destroy() {
       document.removeEventListener('visibilitychange', onVisibility);
+      for (const type of inputEvents) window.removeEventListener(type, onInput);
       detachDebug?.();
       app.destroy(true, { children: true });
     },

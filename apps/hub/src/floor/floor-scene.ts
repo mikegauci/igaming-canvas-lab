@@ -16,7 +16,7 @@ import { gsap } from 'gsap';
 import { Container, Graphics, Rectangle, Text, type Texture, type Ticker } from 'pixi.js';
 import { Backdrop } from './backdrop';
 import { BadgeTip } from './badge-tip';
-import { Cabinet, CABINET_HEIGHT } from './cabinet';
+import { Cabinet, CABINET_HEIGHT, CABINET_REACH } from './cabinet';
 import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
 import { GAMES, type GameInfo } from './games';
@@ -331,6 +331,7 @@ export class FloorScene extends Scene {
     this.cameraTarget = this.targetFor(this.selected);
     this.cameraX = this.cameraTarget;
     this.applyCamera();
+    this.drawDots();
     this.renderCaption();
   }
 
@@ -366,7 +367,12 @@ export class FloorScene extends Scene {
   override update(ticker: Ticker): void {
     const seconds = ticker.deltaMS / 1000;
     this.time += seconds;
-    for (const cabinet of this.cabinets) cabinet.update(seconds);
+    // On phones only one cabinet is in view: the others' attract previews and CRT passes are
+    // most of the floor's cost, so neither animate nor draw them until they scroll back in.
+    for (const cabinet of this.cabinets) {
+      cabinet.visible = this.inView(cabinet);
+      if (cabinet.visible) cabinet.update(seconds);
+    }
     this.crt.time = this.time;
     this.backdrop.update(seconds);
     this.motes.tick(seconds);
@@ -394,6 +400,7 @@ export class FloorScene extends Scene {
     this.selected = next;
     this.cabinets[next]!.setSelected(true);
     this.cameraTarget = this.targetFor(next);
+    this.drawDots();
     this.options.sounds.play('chime');
     session.set(SELECTED_KEY, String(next));
     this.renderCaption();
@@ -451,7 +458,15 @@ export class FloorScene extends Scene {
   private applyCamera() {
     if (!this.launching) this.world.x = -this.cameraX;
     this.backdrop.setCamera(this.cameraX);
-    this.drawDots();
+  }
+
+  /** Whether any of the cabinet (glow included) overlaps the visible part of the screen. */
+  private inView(cabinet: Cabinet): boolean {
+    const { screen } = this.viewport;
+    const zoom = this.world.scale.x;
+    const x = this.world.x + cabinet.x * zoom;
+    const reach = CABINET_REACH * cabinet.scale.x * zoom;
+    return x + reach > screen.x && x - reach < screen.x + screen.width;
   }
 
   /** The carousel follows the finger 1:1, with a rubber-band pull past the first and last cabinet. */

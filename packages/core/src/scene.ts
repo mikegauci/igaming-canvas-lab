@@ -31,6 +31,9 @@ export abstract class Scene extends Container {
   update?(ticker: Ticker): void;
   /** Called on enter and whenever the viewport changes size or orientation. */
   resize?(viewport: Viewport): void;
+  /** True while nothing but ambient animation is running (e.g. between rounds): lets the game
+   * drop to a lower frame rate once input stops. */
+  idle?(): boolean;
 }
 
 export interface ChangeOptions {
