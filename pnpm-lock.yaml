@@ -35,6 +35,9 @@ importers:
 
   apps/bonus:
     dependencies:
+      '@fontsource/orbitron':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@lab/core':
         specifier: workspace:*
         version: link:../../packages/core

@@ -91,7 +91,23 @@ export class Mascot extends Container implements CharacterRig {
     }
     this.eyes.position.set(0, -12);
     this.mouth.position.set(0, 22);
-    this.body.addChild(coin, this.eyes, this.mouth);
+    // A little crown for the Royal Fortune cabinet, riding the top of the coin.
+    const crown = new Graphics()
+      .poly([-30, -70, -34, -104, -16, -86, 0, -110, 16, -86, 34, -104, 30, -70])
+      .fill(GOLD)
+      .stroke({ color: GOLD_DARK, width: 3, join: 'round' })
+      .roundRect(-31, -76, 62, 9, 4)
+      .fill(GOLD_DARK)
+      .circle(0, -110, 5)
+      .fill(GOLD)
+      .circle(-34, -104, 4)
+      .fill(GOLD)
+      .circle(34, -104, 4)
+      .fill(GOLD)
+      .poly([0, -98, 7, -88, 0, -78, -7, -88])
+      .fill(0xb66dff);
+    crown.rotation = -0.12;
+    this.body.addChild(coin, crown, this.eyes, this.mouth);
     this.body.position.set(0, -125);
 
     this.rig.addChild(leftLeg, rightLeg, this.leftArm, this.rightArm, this.body);

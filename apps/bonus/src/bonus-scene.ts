@@ -16,6 +16,7 @@ import type { Texture, Ticker } from 'pixi.js';
 import { CHESTS, type BonusOutcome, type BonusRequest, type BonusStats } from './logic/prizes';
 import { planCountUp, tierFor, type TierName } from './logic/tiers';
 import { BigWinOverlay } from './view/big-win';
+import { BonusCabinet } from './view/cabinet';
 import { Chest, CHEST_WIDTH, prizeLabel } from './view/chest';
 import { Mascot } from './view/mascot';
 
@@ -33,6 +34,7 @@ const ACTION_LABELS: Record<State, string> = {
 const MIN_SUSPENSE_SECONDS = 0.9;
 
 export interface BonusSceneOptions {
+  artwork: Texture;
   coinTexture: Texture;
   stats: BonusStats;
   wallet: Wallet;
@@ -56,9 +58,10 @@ export class BonusScene extends Scene {
   private readonly chests: Chest[];
   private readonly info: Label;
   private readonly overlay: BigWinOverlay;
+  private readonly cabinet: BonusCabinet;
   private keyBindings: (() => void)[] = [];
 
-  constructor({ coinTexture, stats, wallet, sounds, server, notice }: BonusSceneOptions) {
+  constructor({ artwork, coinTexture, stats, wallet, sounds, server, notice }: BonusSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
@@ -68,9 +71,11 @@ export class BonusScene extends Scene {
       wallet,
       sounds,
       actionLabel: ACTION_LABELS.idle,
-      actionSize: 130,
+      actionSize: 124,
       betCaption: 'STAKE',
       betTitles: ['Lower stake', 'Raise stake'],
+      panelWidth: 560,
+      appearance: 'arcade',
     });
     this.hud.onAction = () => this.onAction();
     this.chests = Array.from({ length: CHESTS }, (_, i) => {
@@ -83,13 +88,19 @@ export class BonusScene extends Scene {
         `RTP ${(stats.rtp * 100).toFixed(0)}% · PAYS ON ${(stats.hitRate * 100).toFixed(0)}% · ` +
           `BIG WIN 1 IN ${Math.round(1 / stats.bigWinRate)}`,
       'caption',
-      notice ? { fill: colors.neon } : {},
+      { fontSize: 11, letterSpacing: 0.8, fill: notice ? colors.neon : 0xc2bdd9 },
     );
     this.info.anchor.set(0.5);
     this.overlay = new BigWinOverlay(coinTexture);
     this.overlay.onTier = (tier) => this.onTier(tier);
 
-    this.addChild(this.mascot, ...this.chests, this.info, this.hud, this.overlay);
+    this.cabinet = new BonusCabinet(artwork);
+    this.hud.message.style.fontSize = 16;
+    this.hud.message.style.wordWrap = true;
+    this.hud.message.style.align = 'center';
+    this.hud.betCaption.style.fontSize = 11;
+
+    this.addChild(this.cabinet, this.mascot, ...this.chests, this.info, this.hud, this.overlay);
     this.round.onChange((state) => {
       this.hud.action.text = ACTION_LABELS[state];
       this.hud.action.enabled = state === 'idle' || state === 'presenting';
@@ -101,33 +112,45 @@ export class BonusScene extends Scene {
 
   override update(ticker: Ticker): void {
     this.overlay.update(ticker.deltaMS / 1000);
+    this.cabinet.update(ticker.deltaMS / 1000);
   }
 
-  override resize({ width, height, orientation, screen }: Viewport): void {
+  override resize(viewport: Viewport): void {
+    const { width, height, orientation, screen } = viewport;
     const { hud } = this;
     this.overlay.resize(width, height, screen);
+    hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
+    hud.betCaption.visible = orientation === 'landscape';
     if (orientation === 'landscape') {
-      hud.placeHeader(640, 60);
-      this.mascot.position.set(190, 560);
-      this.mascot.scale.set(1);
-      this.chests.forEach((chest, i) => chest.position.set(470 + i * 215, 470));
-      this.info.position.set(685, 520);
-      hud.placeControls(1130, 300, { stacked: true });
-      hud.panel.position.set(640 - hud.panelWidth / 2, height - 92);
-      hud.mute.position.set(width - 48, 44);
-      hud.music.position.set(width - 116, 44);
+      const stage = { x: 50, y: 172, width: 860, height: 410 };
+      const cx = stage.x + stage.width / 2;
+      const column = 1060;
+      hud.placeHeader(cx, 95);
+      hud.message.position.set(column, 217);
+      this.mascot.position.set(170, 562);
+      this.mascot.scale.set(0.85);
+      this.chests.forEach((chest, i) => chest.position.set(410 + i * 185, 470));
+      this.info.position.set(595, 540);
+      hud.placeControls(column, 339, { stacked: true });
+      hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
+      hud.mute.position.set(width - 54, 44);
+      hud.music.position.set(width - 122, 44);
+      this.cabinet.arrange(viewport, 157, stage, 426, { x: 944, y: 242, width: 232, height: 342 });
     } else {
       const cx = width / 2;
-      hud.placeHeader(cx, 70);
-      this.mascot.position.set(cx, 460);
+      const stage = { x: 30, y: 250, width: 660, height: 620 };
+      hud.placeHeader(cx, 143);
+      hud.message.position.set(cx, 212);
+      this.mascot.position.set(cx, 572);
       this.mascot.scale.set(0.9);
-      const gap = CHEST_WIDTH + 50;
-      this.chests.forEach((chest, i) => chest.position.set(cx + (i - 1) * gap, 760));
-      this.info.position.set(cx, 810);
-      hud.placeControls(cx, 940, { spread: 180 });
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
-      hud.mute.position.set(width - 50, 60);
-      hud.music.position.set(width - 118, 60);
+      const gap = CHEST_WIDTH + 45;
+      this.chests.forEach((chest, i) => chest.position.set(cx + (i - 1) * gap, 790));
+      this.info.position.set(cx, 846);
+      hud.placeControls(cx, 980, { spread: 207 });
+      hud.panel.position.set(cx - hud.panelWidth / 2, 1105);
+      hud.mute.position.set(width - 57, 51);
+      hud.music.position.set(width - 125, 51);
+      this.cabinet.arrange(viewport, 892, stage, 535, { x: 65, y: 910, width: 590, height: 178 });
     }
   }
 

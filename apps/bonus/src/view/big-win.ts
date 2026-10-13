@@ -1,4 +1,4 @@
-import { type Bounds, colors, Confetti, fontFamily, formatCredits } from '@lab/core';
+import { arcadeFont, type Bounds, colors, Confetti, formatCredits } from '@lab/core';
 import { gsap } from 'gsap';
 import { BitmapText, Container, Graphics, Text, type Texture } from 'pixi.js';
 import type { CountUpStep, TierName } from '../logic/tiers';
@@ -40,11 +40,13 @@ export class BigWinOverlay extends Container {
     this.banner = new Text({
       text: '',
       style: {
-        fontFamily,
-        fontSize: 110,
+        fontFamily: arcadeFont,
+        fontSize: 104,
         fontWeight: '900',
+        fontStyle: 'italic',
         fill: 0xffffff,
-        letterSpacing: 6,
+        letterSpacing: 4,
+        padding: 24,
         stroke: { color: colors.bg, width: 10, join: 'round' },
         dropShadow: { color: colors.neon, blur: 18, distance: 0, alpha: 0.9 },
       },
@@ -52,7 +54,7 @@ export class BigWinOverlay extends Container {
     this.banner.anchor.set(0.5);
     this.counter = new BitmapText({
       text: '',
-      style: { fontFamily, fontSize: 84, fontWeight: 'bold', fill: 0xffffff },
+      style: { fontFamily: arcadeFont, fontSize: 80, fontWeight: 'bold', fill: 0xffffff },
     });
     this.counter.anchor.set(0.5);
     this.coins = new Confetti(360, coinTexture);
@@ -86,6 +88,8 @@ export class BigWinOverlay extends Container {
       .clear()
       .rect(screen.x, screen.y, screen.width, screen.height)
       .fill({ color: colors.bg, alpha: 0.82 });
+    // Orbitron is wide: shrink the banner so EPIC WIN fits a portrait screen.
+    this.banner.style.fontSize = Math.min(104, Math.floor(width / 8.6));
     this.rays.position.set(width / 2, height * 0.42);
     this.banner.position.set(width / 2, height * 0.38);
     this.counter.position.set(width / 2, height * 0.38 + 120);
