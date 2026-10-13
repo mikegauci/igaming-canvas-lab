@@ -75,6 +75,8 @@ export class CrashScene extends Scene {
   private bet = 0;
   private won = false;
   private elapsed = 0;
+  /** performance.now() when the climb started on this client. */
+  private launchedAt = 0;
   private nextMilestone = 0;
   private unbindAuto: (() => void) | null = null;
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,12 +118,12 @@ export class CrashScene extends Scene {
   }
 
   override update(ticker: Ticker): void {
-    // elapsedMS is the real time since the last frame (deltaMS is capped), so the climb stays
-    // in step with the server's clock even after a slow frame.
     const seconds = ticker.elapsedMS / 1000;
     const state = this.round.state;
     if (state === 'flying' || state === 'cashing' || state === 'cashed') {
-      this.elapsed += seconds;
+      // Read off the clock rather than summing frame times, so the climb stays in step with the
+      // server's clock after slow frames and while the ticker is paused in a hidden tab.
+      this.elapsed = (performance.now() - this.launchedAt) / 1000;
       this.chart.setElapsed(this.elapsed);
       const multiplier = toCents(multiplierAt(this.elapsed));
       if (state !== 'cashed') {
@@ -252,6 +254,7 @@ export class CrashScene extends Scene {
     }
 
     this.elapsed = 0;
+    this.launchedAt = performance.now();
     this.nextMilestone = 0;
     this.chart.launch();
     this.round.send('launched');

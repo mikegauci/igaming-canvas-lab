@@ -6,6 +6,7 @@ import {
   Label,
   onKey,
   Scene,
+  sessionStore,
   type Achievements,
   type SoundManager,
   type Viewport,
@@ -64,6 +65,7 @@ const CAROUSEL_SPACING = 380;
 /** Portrait HUD scale, so the credits, badges and buttons stay finger-sized on a phone. */
 const PORTRAIT_HUD_SCALE = 1.7;
 const SELECTED_KEY = 'lab:floor-selected';
+const session = sessionStore();
 /** Portrait layout: where the carousel dots sit, and the bottom of the HUD (title, badges). */
 const DOTS_FROM_BOTTOM = 190;
 const HUD_BOTTOM = 280;
@@ -122,6 +124,8 @@ export class FloorScene extends Scene {
   private time = 0;
   private launching = false;
   private keyBindings: (() => void)[] = [];
+  /** Listeners on the long-lived wallet, sounds, badges and quality, released in destroy(). */
+  private subscriptions: (() => void)[] = [];
   private konamiProgress = 0;
   private readonly onKonamiKey = (event: KeyboardEvent) => this.trackKonami(event);
   private readonly onWheel = (event: WheelEvent) => this.scrollSelect(event);
@@ -145,7 +149,7 @@ export class FloorScene extends Scene {
       this.motes.setDensity(particles);
     };
     applyQuality(options.quality.settings);
-    options.quality.onChange(applyQuality);
+    this.subscriptions.push(options.quality.onChange(applyQuality));
 
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
@@ -153,7 +157,7 @@ export class FloorScene extends Scene {
     this.credits.anchor.set(0, 0.5);
     const renderCredits = () => (this.credits.text = `CREDITS ${formatCredits(wallet.balance)}`);
     renderCredits();
-    wallet.onChange(renderCredits);
+    this.subscriptions.push(wallet.onChange(renderCredits));
 
     this.badgesDone = new Text({
       text: '★ ALL BADGES COLLECTED · THANKS FOR PLAYING ★',
@@ -174,13 +178,13 @@ export class FloorScene extends Scene {
     );
     this.mute.lit = !sounds.muted;
     this.mute.on('pointertap', () => sounds.toggle());
-    sounds.onChange(() => (this.mute.lit = !sounds.muted));
+    this.subscriptions.push(sounds.onChange(() => (this.mute.lit = !sounds.muted)));
     this.music = new NeonIconButton(musicGlyph, colors.neon, (on) =>
       on ? 'Turn music off' : 'Turn music on',
     );
     this.music.lit = !sounds.musicMuted;
     this.music.on('pointertap', () => sounds.toggleMusic());
-    sounds.onMusicChange(() => (this.music.lit = !sounds.musicMuted));
+    this.subscriptions.push(sounds.onMusicChange(() => (this.music.lit = !sounds.musicMuted)));
     this.confetti = new Confetti(260, coinTexture);
 
     // Full-screen hit area so swipes work anywhere, not just on a cabinet.
@@ -242,7 +246,7 @@ export class FloorScene extends Scene {
       this.introLayer,
     );
 
-    const saved = Number(sessionStorage.getItem(SELECTED_KEY));
+    const saved = Number(session.get(SELECTED_KEY));
     this.selected = Number.isInteger(saved) && saved >= 0 && saved < GAMES.length ? saved : 0;
     this.cabinets[this.selected]!.setSelected(true);
     this.renderCaption();
@@ -350,6 +354,8 @@ export class FloorScene extends Scene {
 
   override destroy(...args: Parameters<Scene['destroy']>): void {
     this.exit();
+    this.subscriptions.forEach((unsubscribe) => unsubscribe());
+    this.subscriptions = [];
     this.introTimeline?.kill();
     gsap.killTweensOf([this, this.curtain, this.flash, this.flash.scale, this.introLayer]);
     gsap.killTweensOf([this.world, this.world.scale]);
@@ -389,7 +395,7 @@ export class FloorScene extends Scene {
     this.cabinets[next]!.setSelected(true);
     this.cameraTarget = this.targetFor(next);
     this.options.sounds.play('chime');
-    sessionStorage.setItem(SELECTED_KEY, String(next));
+    session.set(SELECTED_KEY, String(next));
     this.renderCaption();
   }
 
@@ -410,7 +416,7 @@ export class FloorScene extends Scene {
     const cabinet = this.cabinets[index]!;
     const game = GAMES[index]!;
     this.options.sounds.play('zoom');
-    sessionStorage.setItem(SELECTED_KEY, String(index));
+    session.set(SELECTED_KEY, String(index));
 
     const focus = this.toLocal(cabinet.screenCenter);
     const zoom = 5;
@@ -573,7 +579,7 @@ export class FloorScene extends Scene {
       this.badgesDone.visible = achievements.complete;
     };
     draw();
-    achievements.onChange(draw);
+    this.subscriptions.push(achievements.onChange(draw));
   }
 
   private hideBadgeTip() {
@@ -591,8 +597,14 @@ export class FloorScene extends Scene {
   }
 
   private trackKonami(event: KeyboardEvent) {
-    this.konamiProgress = event.code === KONAMI[this.konamiProgress] ? this.konamiProgress + 1 : 0;
-    if (event.code === KONAMI[0] && this.konamiProgress === 0) this.konamiProgress = 1;
+    // Progress is the longest start of the code that the latest keys end with, so a stray extra
+    // key (a third ↑) doesn't throw away a run that is still on track.
+    const keys = [...KONAMI.slice(0, this.konamiProgress), event.code];
+    let progress = Math.min(keys.length, KONAMI.length);
+    while (progress > 0 && !keys.slice(-progress).every((code, i) => code === KONAMI[i])) {
+      progress--;
+    }
+    this.konamiProgress = progress;
     if (this.konamiProgress < KONAMI.length) return;
     this.konamiProgress = 0;
     this.options.sounds.play('coin');
@@ -645,10 +657,20 @@ export class FloorScene extends Scene {
     const finish = () => {
       if (introLayer.destroyed || !this.introActive) return;
       this.introActive = false;
-      window.removeEventListener('keydown', finish);
-      // Skipping jumps to the end state, so nothing is left half-lit.
-      tl.progress(1).kill();
+      window.removeEventListener('keydown', skipKey);
+      // Skipping jumps to the end state, so nothing is left half-lit. Events are suppressed so
+      // the sounds queued along the way don't all play at once; a skip mid-play still glints.
+      const skipped = tl.progress() > 0 && tl.progress() < 1;
+      tl.progress(1, true).kill();
+      if (skipped) title.shine();
       introLayer.destroy({ children: true });
+    };
+    // The key that skips the intro must not also reach the floor's own bindings (registered
+    // later, in enter()): Enter or Space would otherwise launch the selected game.
+    const skipKey = (event: KeyboardEvent) => {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      finish();
     };
     const tl = gsap
       .timeline({ paused: true, onComplete: finish })
@@ -670,6 +692,6 @@ export class FloorScene extends Scene {
     tl.to(hud, { alpha: 1, duration: 0.3 }, 1.75);
     this.introTimeline = tl;
     introLayer.on('pointertap', finish);
-    window.addEventListener('keydown', finish, { once: true });
+    window.addEventListener('keydown', skipKey, { once: true });
   }
 }

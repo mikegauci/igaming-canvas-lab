@@ -1,4 +1,4 @@
-import { Achievements, colors, createGame, SoundManager, Wallet } from '@lab/core';
+import { Achievements, colors, createGame, sessionStore, SoundManager, Wallet } from '@lab/core';
 import { Assets, Container, Graphics, Rectangle, type Texture } from 'pixi.js';
 import { FloorScene } from './floor-scene';
 import { loadFonts } from './fonts';
@@ -131,8 +131,9 @@ export async function startFloor(
   });
   moteArt.destroy();
 
-  const intro = sessionStorage.getItem(INTRO_KEY) === null;
-  sessionStorage.setItem(INTRO_KEY, '1');
+  const session = sessionStore();
+  const intro = session.get(INTRO_KEY) === null;
+  session.set(INTRO_KEY, '1');
 
   const scene = new FloorScene({
     wallet: new Wallet(),

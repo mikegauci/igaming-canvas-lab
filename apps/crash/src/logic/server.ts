@@ -85,7 +85,9 @@ export class MockCrashServer {
     if (autoCashOut !== null && autoCashOut > 1) {
       // Fires a hair after the target so the multiplier has really reached it.
       const at = secondsToReach(autoCashOut) * 1000 + 1;
-      if (at < crashIn) round.timers.push(setTimeout(() => this.settle(roundId, true), at));
+      if (at < crashIn) {
+        round.timers.push(setTimeout(() => this.settleAuto(roundId, autoCashOut), at));
+      }
     }
 
     // The start acknowledgement travels back to the client too.
@@ -96,23 +98,35 @@ export class MockCrashServer {
   /** Asks to cash out now. Resolves with the server's verdict after the round trip. */
   async cashOut(roundId: string): Promise<Settlement> {
     await wait(this.delay());
-    const verdict = this.settle(roundId, false);
+    const verdict = this.settle(roundId);
     await wait(this.delay());
     return verdict;
   }
 
-  private settle(roundId: string, automatic: boolean): Settlement {
+  private settle(roundId: string): Settlement {
     const round = this.rounds.get(roundId);
     if (!round) throw new Error(`Unknown round ${roundId}`);
     if (round.settlement) return round.settlement;
 
     const elapsed = (this.clock.now() - round.startedAt) / 1000;
-    const verdict = settleCashOut(round.crashPoint, elapsed, round.bet);
+    round.settlement = settleCashOut(round.crashPoint, elapsed, round.bet);
+    return round.settlement;
+  }
+
+  /**
+   * An auto cash-out pays exactly its target, which is only scheduled below the crash point: a
+   * timer that fires late (throttled tab, busy thread) must not change the verdict.
+   */
+  private settleAuto(roundId: string, target: number) {
+    const round = this.rounds.get(roundId);
+    if (!round || round.settlement) return;
+    const verdict = {
+      cashedOut: true as const,
+      multiplier: target,
+      win: Math.floor(round.bet * target),
+    };
     round.settlement = verdict;
-    if (verdict.cashedOut && automatic) {
-      setTimeout(() => round.events.onCashOut(verdict), this.delay());
-    }
-    return verdict;
+    setTimeout(() => round.events.onCashOut(verdict), this.delay());
   }
 
   private crash(roundId: string) {
@@ -120,7 +134,12 @@ export class MockCrashServer {
     if (!round) return;
     round.settlement ??= { cashedOut: false, crashPoint: round.crashPoint };
     round.timers.forEach(clearTimeout);
-    setTimeout(() => round.events.onCrash(round.crashPoint), this.delay());
+    setTimeout(() => {
+      round.events.onCrash(round.crashPoint);
+      // A cash-out the client sent before it heard of the crash can still be in flight: keep the
+      // round for one more trip, then forget it.
+      setTimeout(() => this.rounds.delete(roundId), this.latency[1]);
+    }, this.delay());
   }
 
   private delay(): number {
