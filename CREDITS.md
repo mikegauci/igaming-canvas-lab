@@ -18,6 +18,7 @@ fonts, self-hosted from Fontsource:
 | ------------------------------------------------------------------ | --------------------------------- |
 | [PixiJS](https://pixijs.com)                                       | MIT                               |
 | [@pixi/sound](https://github.com/pixijs/sound)                     | MIT                               |
+| [pixi-filters](https://github.com/pixijs/filters)                  | MIT                               |
 | [GSAP](https://gsap.com)                                           | GSAP Standard "no charge" licence |
 | [Vite](https://vite.dev), [Vitest](https://vitest.dev), TypeScript | MIT / Apache-2.0                  |
 

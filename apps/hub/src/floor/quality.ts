@@ -6,12 +6,16 @@ export interface QualitySettings {
   maxResolution: number;
   /** CRT pass (curvature, scanlines) on the cabinet screens: five small filter passes. */
   crt: boolean;
+  /** Resolution of the full-screen bloom and grade passes; 0 turns post-processing off. */
+  bloomResolution: number;
+  /** Share of the full particle budget (the drifting motes). */
+  particles: number;
 }
 
 const TIERS: Record<QualityTier, QualitySettings> = {
-  high: { tier: 'high', maxResolution: 2, crt: true },
-  medium: { tier: 'medium', maxResolution: 1.5, crt: true },
-  low: { tier: 'low', maxResolution: 1, crt: false },
+  high: { tier: 'high', maxResolution: 2, crt: true, bloomResolution: 1, particles: 1 },
+  medium: { tier: 'medium', maxResolution: 1.5, crt: true, bloomResolution: 0.5, particles: 0.6 },
+  low: { tier: 'low', maxResolution: 1, crt: false, bloomResolution: 0, particles: 0.25 },
 };
 
 const ORDER: QualityTier[] = ['high', 'medium', 'low'];
