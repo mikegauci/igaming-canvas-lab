@@ -11,6 +11,11 @@ const INTRO_KEY = 'lab:intro-seen';
 export interface FloorHandle {
   /** Plays the boot animation, if this visit has one; call once the floor is on screen. */
   startIntro(): void;
+  /**
+   * True when the floor should wait behind an enter button: this visit plays the intro, and the
+   * browser holds audio until a tap. The tap on that button starts the music and intro sounds.
+   */
+  needsEnter: boolean;
 }
 
 /**
@@ -143,8 +148,10 @@ export async function startFloor(
   });
   await game.scenes.change(scene, { fade: intro ? 0 : 0.3 });
 
+  const anyAudio = !sounds.muted || !sounds.musicMuted;
   return {
     startIntro: () => scene.startIntro(),
+    needsEnter: intro && anyAudio && !(await sounds.canPlayWithoutGesture()),
   };
 }
 

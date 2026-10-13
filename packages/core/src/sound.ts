@@ -86,6 +86,18 @@ export class SoundManager {
     unlock();
   }
 
+  /**
+   * Whether the browser lets this page play audio right now, without waiting for a gesture.
+   * Some browsers allow it (e.g. Chrome for sites a player often uses); mobile ones don't.
+   */
+  async canPlayWithoutGesture(): Promise<boolean> {
+    const context = sound.context.audioContext;
+    if (!context || context.state === 'running') return true;
+    // A blocked resume can stay pending rather than reject, so give it a moment only.
+    await Promise.race([context.resume().catch(() => undefined), wait(150)]);
+    return (context.state as string) === 'running';
+  }
+
   get muted(): boolean {
     return this._muted;
   }
@@ -153,3 +165,5 @@ export class SoundManager {
     this.musicListeners.clear();
   }
 }
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,4 +1,4 @@
-import { fail, finish, progress } from './loader';
+import { enter, fail, finish, progress } from './loader';
 
 /**
  * The hub is the Pixi Casino Floor, behind a boot screen while it loads. A plain list of the games
@@ -19,6 +19,8 @@ import('./floor/start')
     return startFloor(stage, (done) => progress(Math.round(85 + done * 10), 2));
   })
   .then(async (floor) => {
+    // Browsers keep sound off until a tap, so on a fresh visit that tap is the way in.
+    if (floor.needsEnter) await enter();
     await finish();
     floor.startIntro();
   })

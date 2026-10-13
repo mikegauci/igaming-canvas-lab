@@ -18,6 +18,30 @@ export function progress(percent: number, seconds: number): void {
   loader.setAttribute('aria-valuenow', String(percent));
 }
 
+/**
+ * Swaps the loading bar for an enter button and resolves when it's pressed. The press is the
+ * user gesture browsers require before playing sound, so the floor opens with its audio on.
+ */
+export async function enter(): Promise<void> {
+  progress(100, 0.25);
+  await wait(300);
+  loader.removeAttribute('role');
+  loader.removeAttribute('aria-label');
+  loader.removeAttribute('aria-valuenow');
+  const meter = loader.querySelector<HTMLElement>('.loader-meter')!;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'loader-enter';
+  button.textContent = 'ENTER CASINO FLOOR';
+  meter.replaceChildren(button);
+  meter.removeAttribute('aria-hidden');
+  button.focus({ preventScroll: true });
+  await new Promise<void>((resolve) =>
+    button.addEventListener('click', () => resolve(), { once: true }),
+  );
+  button.disabled = true;
+}
+
 /** Fills the bar, then switches the screen off like an old CRT and removes it. */
 export async function finish(): Promise<void> {
   progress(100, 0.25);
