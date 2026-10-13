@@ -116,6 +116,7 @@ await game.scenes.change(
     // Same storage key as the hub and other games, so the balance carries between them.
     wallet: new Wallet({ betLevels: BET_LEVELS, defaultBet: 10 }),
     sounds,
+    perf: game,
     server: new MockOutcomeServer(resolver, { seed: seedFromQuery() }),
     notice: demoTier
       ? `SHOWCASE MODE: EVERY PICK IS A ${demoTier.at}× ${demoTier.name} WIN`

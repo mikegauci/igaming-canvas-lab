@@ -39,6 +39,8 @@ export interface CrashSceneOptions {
   renderer: Renderer;
   wallet: Wallet;
   sounds: SoundManager;
+  /** The game, for the stats-panel toggle. */
+  perf?: { debug: boolean };
   server: MockCrashServer;
 }
 
@@ -81,13 +83,14 @@ export class CrashScene extends Scene {
   private unbindAuto: (() => void) | null = null;
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor({ artwork, renderer, wallet, sounds, server }: CrashSceneOptions) {
+  constructor({ artwork, renderer, wallet, sounds, server, perf }: CrashSceneOptions) {
     super();
     this.wallet = wallet;
     this.sounds = sounds;
     this.server = server;
 
     this.hud = new GameHud({
+      stats: perf,
       title: 'CRASH',
       wallet,
       sounds,
@@ -150,31 +153,32 @@ export class CrashScene extends Scene {
     hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
     hud.betCaption.visible = orientation === 'landscape';
     if (orientation === 'landscape') {
-      chart.setSize(830, 396);
-      chart.position.set(60, 176);
-      this.history.position.set(68, 594);
-      const cx = chart.x + chart.size.width / 2;
+      // Centred like the other games: last rounds on the left, the chart, then the controls.
+      const cx = width / 2;
       const column = 1060;
+      chart.setSize(552, 396);
+      chart.position.set(cx - 276, 176);
+      const strip = this.history.arrange('column');
+      this.history.position.set(chart.x - 34 - strip.width, 374 - strip.height / 2);
       hud.placeHeader(cx, 95);
       hud.message.position.set(column, 217);
       hud.placeControls(column, 300, { stacked: true });
-      this.autoButton.position.set(column, 506);
+      this.autoButton.position.set(column, 512);
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
-      hud.mute.position.set(width - 54, 44);
-      hud.music.position.set(width - 122, 44);
+      hud.placeToggles(width - 54, 44);
       this.cabinet.arrange(viewport, cx, 157, { x: 944, y: 242, width: 232, height: 342 });
     } else {
       const cx = width / 2;
       chart.setSize(660, 500);
       chart.position.set(cx - 330, 250);
-      this.history.position.set(cx - this.history.width / 2, 765);
+      const strip = this.history.arrange('row');
+      this.history.position.set(cx - strip.width / 2, 765);
       hud.placeHeader(cx, 143);
       hud.message.position.set(cx, 212);
       hud.placeControls(cx, 890, { spread: 207 });
       this.autoButton.position.set(cx, 968);
       hud.panel.position.set(cx - hud.panelWidth / 2, 1070);
-      hud.mute.position.set(width - 57, 51);
-      hud.music.position.set(width - 125, 51);
+      hud.placeToggles(width - 57, 51);
       this.cabinet.arrange(viewport, cx, 812, { x: 65, y: 830, width: 590, height: 222 });
     }
   }

@@ -111,3 +111,58 @@ export class MusicButton extends MuteButton {
     super(sounds, size, appearance, 'music');
   }
 }
+
+/** Pulse toggle for a game's stats panel (FPS, draw calls), lit while the panel shows. */
+export class StatsButton extends Container {
+  private readonly icon = new Graphics();
+
+  constructor(
+    private readonly target: { debug: boolean },
+    private readonly size = 56,
+    appearance: 'classic' | 'arcade' = 'classic',
+  ) {
+    super();
+    const bg = new Graphics()
+      .circle(0, 0, size / 2)
+      .fill({ color: colors.panel, alpha: 0.9 })
+      .stroke({ color: colors.cyan, alpha: 0.5, width: 2 });
+    if (appearance === 'arcade') {
+      bg.circle(0, 0, size / 2 + 3)
+        .stroke({ color: colors.cyan, width: 8, alpha: 0.12 })
+        .circle(0, 0, size / 2)
+        .stroke({ color: 0xb6f8ff, width: 1.5 });
+    }
+    this.addChild(bg, this.icon);
+    this.eventMode = 'static';
+    this.cursor = 'pointer';
+    this.accessible = true;
+    this.accessibleType = 'button';
+    this.on('pointertap', () => {
+      target.debug = !target.debug;
+      this.draw();
+    });
+    this.draw();
+  }
+
+  private draw() {
+    const on = this.target.debug;
+    const s = this.size / 56;
+    this.accessibleTitle = on ? 'Hide performance stats' : 'Show performance stats';
+    // A heartbeat trace, like the Casino Floor's stats button.
+    this.icon
+      .clear()
+      .moveTo(-16 * s, 1 * s)
+      .lineTo(-7 * s, 1 * s)
+      .lineTo(-3 * s, -10 * s)
+      .lineTo(3 * s, 11 * s)
+      .lineTo(7 * s, -2 * s)
+      .lineTo(9 * s, 1 * s)
+      .lineTo(16 * s, 1 * s)
+      .stroke({
+        color: on ? colors.cyan : colors.muted,
+        width: 3 * s,
+        cap: 'round',
+        join: 'round',
+      });
+  }
+}

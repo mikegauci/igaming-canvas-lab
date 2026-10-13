@@ -39,6 +39,8 @@ export interface BonusSceneOptions {
   stats: BonusStats;
   wallet: Wallet;
   sounds: SoundManager;
+  /** The game, for the stats-panel toggle. */
+  perf?: { debug: boolean };
   server: OutcomeService<BonusRequest, BonusOutcome>;
   /** Shown under the chests in showcase mode (?demo=…). */
   notice?: string;
@@ -61,12 +63,22 @@ export class BonusScene extends Scene {
   private readonly cabinet: BonusCabinet;
   private keyBindings: (() => void)[] = [];
 
-  constructor({ artwork, coinTexture, stats, wallet, sounds, server, notice }: BonusSceneOptions) {
+  constructor({
+    artwork,
+    coinTexture,
+    stats,
+    wallet,
+    sounds,
+    server,
+    notice,
+    perf,
+  }: BonusSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
 
     this.hud = new GameHud({
+      stats: perf,
       title: 'BONUS ROUND',
       wallet,
       sounds,
@@ -122,19 +134,22 @@ export class BonusScene extends Scene {
     hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
     hud.betCaption.visible = orientation === 'landscape';
     if (orientation === 'landscape') {
-      const stage = { x: 50, y: 172, width: 860, height: 410 };
-      const cx = stage.x + stage.width / 2;
+      // Centred like the other games: the mascot on the left, the chests, then the controls.
+      const cx = width / 2;
+      const stage = { x: cx - 284, y: 172, width: 568, height: 410 };
       const column = 1060;
       hud.placeHeader(cx, 95);
       hud.message.position.set(column, 217);
-      this.mascot.position.set(170, 562);
+      this.mascot.position.set(220, 562);
       this.mascot.scale.set(0.85);
-      this.chests.forEach((chest, i) => chest.position.set(410 + i * 185, 470));
-      this.info.position.set(595, 540);
+      this.chests.forEach((chest, i) => {
+        chest.scale.set(0.86);
+        chest.position.set(cx + (i - 1) * 168, 470);
+      });
+      this.info.position.set(cx, 540);
       hud.placeControls(column, 339, { stacked: true });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
-      hud.mute.position.set(width - 54, 44);
-      hud.music.position.set(width - 122, 44);
+      hud.placeToggles(width - 54, 44);
       this.cabinet.arrange(viewport, 157, stage, 426, { x: 944, y: 242, width: 232, height: 342 });
     } else {
       const cx = width / 2;
@@ -144,12 +159,14 @@ export class BonusScene extends Scene {
       this.mascot.position.set(cx, 572);
       this.mascot.scale.set(0.9);
       const gap = CHEST_WIDTH + 45;
-      this.chests.forEach((chest, i) => chest.position.set(cx + (i - 1) * gap, 790));
+      this.chests.forEach((chest, i) => {
+        chest.scale.set(1);
+        chest.position.set(cx + (i - 1) * gap, 790);
+      });
       this.info.position.set(cx, 846);
       hud.placeControls(cx, 980, { spread: 207 });
       hud.panel.position.set(cx - hud.panelWidth / 2, 1105);
-      hud.mute.position.set(width - 57, 51);
-      hud.music.position.set(width - 125, 51);
+      hud.placeToggles(width - 57, 51);
       this.cabinet.arrange(viewport, 892, stage, 535, { x: 65, y: 910, width: 590, height: 178 });
     }
   }

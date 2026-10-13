@@ -86,7 +86,7 @@ function cover(texture: Texture, box: Rectangle, focusY = 0.5) {
 }
 
 /** The little badge over each marquee: cherries, a star, a gem, a rocket or a crown. */
-function emblem(game: GameInfo['id'], titleWidth: number): Container {
+function emblem(game: GameInfo['id']): Container {
   const g = new Graphics();
   switch (game) {
     case 'slot':
@@ -100,9 +100,10 @@ function emblem(game: GameInfo['id'], titleWidth: number): Container {
       break;
     case 'crash': {
       const rocket = draw.rocket();
-      rocket.scale.set(1.1);
-      rocket.rotation = -0.55;
-      rocket.position.set(titleWidth / 2 + 14, -H + MARQUEE_HEIGHT / 2 - 6);
+      // Nose up, standing on the marquee like the other emblems.
+      rocket.scale.set(1.45);
+      rocket.rotation = -Math.PI / 2;
+      rocket.position.set(0, -H - 10);
       return rocket;
     }
     case 'bonus':
@@ -292,7 +293,7 @@ export class Cabinet extends Container {
     title.anchor.set(0.5);
     title.scale.set(Math.min(1, (W - 34) / title.width));
     title.position.set(0, -H + MARQUEE_HEIGHT / 2);
-    const badge = emblem(game.id, title.width);
+    const badge = emblem(game.id);
     const bulbLayer = new Container();
     for (let i = 0; i < BULBS_PER_ROW; i++) {
       const bulb = new Graphics()

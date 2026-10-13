@@ -10,7 +10,7 @@ import { formatCredits, type Wallet } from '../wallet';
 import { BalancePanel } from './balance-panel';
 import { Button } from './button';
 import { Label } from './label';
-import { MusicButton, MuteButton } from './mute-button';
+import { MusicButton, MuteButton, StatsButton } from './mute-button';
 import { arcadeFont, chromeFill } from './arcade-style';
 
 export interface GameHudOptions {
@@ -31,6 +31,8 @@ export interface GameHudOptions {
   achievements?: Achievements;
   /** Opt-in cabinet treatment; existing games retain their default appearance. */
   appearance?: 'classic' | 'arcade';
+  /** The game whose stats panel (FPS, draw calls) the pulse button toggles; no button without it. */
+  stats?: { debug: boolean };
 }
 
 export type RoundStart<TOutcome> =
@@ -39,6 +41,8 @@ export type RoundStart<TOutcome> =
   | { status: 'settled'; result: RoundResult<TOutcome> };
 
 const MESSAGE_GAP = 44;
+/** Gap between the round toggles in the top-right corner. */
+const TOGGLE_GAP = 68;
 
 /**
  * Everything around the play area that every game shares: title and message line, the main
@@ -55,10 +59,12 @@ export class GameHud extends Container {
   readonly action: Button;
   readonly betDown: Button;
   readonly betUp: Button;
+  readonly maxBet: Button;
   readonly betCaption: Label;
   readonly panel: BalancePanel;
   readonly mute: MuteButton;
   readonly music: MusicButton;
+  readonly stats: StatsButton | null;
   readonly panelWidth: number;
 
   readonly achievements: Achievements;
@@ -84,6 +90,7 @@ export class GameHud extends Container {
     panelWidth = 520,
     achievements = new Achievements(),
     appearance = 'classic',
+    stats,
   }: GameHudOptions) {
     super();
     this.achievements = achievements;
@@ -130,15 +137,27 @@ export class GameHud extends Container {
       });
     this.betDown = betButton('−', betTitles[0], 'Arrow Down');
     this.betUp = betButton('+', betTitles[1], 'Arrow Up');
+    this.maxBet = new Button({
+      label: 'MAX BET',
+      title: 'Max bet',
+      shortcut: 'M',
+      width: 92,
+      height: 28,
+      fontSize: 12,
+      color: colors.gold,
+      appearance,
+    });
     this.betCaption = new Label(betCaption, 'caption');
     this.betCaption.anchor.set(0.5);
     this.panel = new BalancePanel(wallet, panelWidth, 76, appearance);
     this.mute = new MuteButton(sounds, 56, appearance);
     this.music = new MusicButton(sounds, 56, appearance);
+    this.stats = stats ? new StatsButton(stats, 56, appearance) : null;
 
     this.action.onPress = () => this.onAction?.();
     this.betDown.onPress = () => this.changeBet(-1);
     this.betUp.onPress = () => this.changeBet(1);
+    this.maxBet.onPress = () => this.setMaxBet();
 
     this.addChild(
       this.title,
@@ -146,10 +165,12 @@ export class GameHud extends Container {
       this.action,
       this.betDown,
       this.betUp,
+      this.maxBet,
       this.betCaption,
       this.panel,
       this.mute,
       this.music,
+      ...(this.stats ? [this.stats] : []),
       this.toastView,
     );
     this.toastLabel.anchor.set(0.5);
@@ -200,15 +221,17 @@ export class GameHud extends Container {
     this.betting = enabled;
     this.betDown.enabled = enabled;
     this.betUp.enabled = enabled;
+    this.maxBet.enabled = enabled;
   }
 
-  /** Space and the arrow keys. Call from the scene's enter(); exit()/destroy() release them. */
+  /** Space, the arrow keys and M (max bet). Call from the scene's enter(); exit()/destroy() release them. */
   bindKeys(): void {
     this.unbindKeys();
     this.keyBindings = [
       onKey('Space', () => this.onAction?.()),
       onKey('ArrowUp', () => this.changeBet(1)),
       onKey('ArrowDown', () => this.changeBet(-1)),
+      onKey('KeyM', () => this.setMaxBet()),
     ];
   }
 
@@ -226,16 +249,26 @@ export class GameHud extends Container {
   }
 
   /**
-   * Action button at (x, y). Bet buttons go either side of it (`spread` apart), or underneath
-   * it when `stacked`, with the caption below them.
+   * Action button at (x, y). Bet buttons go either side of it (`spread` apart), with max bet
+   * under the + button; or, when `stacked`, underneath it with the caption and max bet below.
    */
   placeControls(x: number, y: number, { spread = 135, stacked = false } = {}): void {
     this.action.position.set(x, y);
-    const betY = stacked ? y + this.actionSize / 2 + 64 : y;
+    const betY = stacked ? y + this.actionSize / 2 + 52 : y;
     const betSpread = stacked ? 50 : spread;
     this.betDown.position.set(x - betSpread, betY);
     this.betUp.position.set(x + betSpread, betY);
-    this.betCaption.position.set(x, stacked ? betY + 48 : y + this.actionSize / 2 + 16);
+    const captionY = stacked ? betY + 42 : y + this.actionSize / 2 + 16;
+    this.betCaption.position.set(x, captionY);
+    if (stacked) this.maxBet.position.set(x, captionY + 28);
+    else this.maxBet.position.set(x + betSpread, betY + 50);
+  }
+
+  /** The round toggles, right to left from (right, y): sound, music, then stats. */
+  placeToggles(right: number, y: number): void {
+    this.mute.position.set(right, y);
+    this.music.position.set(right - TOGGLE_GAP, y);
+    this.stats?.position.set(right - TOGGLE_GAP * 2, y);
   }
 
   /**
@@ -294,6 +327,12 @@ export class GameHud extends Container {
   private changeBet(direction: 1 | -1) {
     if (!this.betting) return;
     this.wallet.stepBet(direction);
+    this.sounds.play('click');
+  }
+
+  private setMaxBet() {
+    if (!this.betting) return;
+    this.wallet.maxBet();
     this.sounds.play('click');
   }
 }

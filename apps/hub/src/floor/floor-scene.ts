@@ -294,7 +294,7 @@ export class FloorScene extends Scene {
       this.mute.position.set(width - 44, 44);
       this.caption.position.set(width / 2, height - 46);
       this.hint.position.set(width / 2, height - 18);
-      this.hint.text = 'HOVER TO PREVIEW · CLICK TO PLAY · ← → TO BROWSE';
+      this.hint.text = 'CLICK TO PLAY · ← → TO BROWSE';
       this.dots.clear();
     } else {
       // The cabinets stand just above the carousel dots, but never so low on a short screen

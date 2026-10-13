@@ -291,9 +291,10 @@ export class CrashChart extends Container {
       .fill(colors.gold);
     const text = new BitmapText({
       text: `${multiplier.toFixed(2)}×`,
-      style: { fontFamily, fontSize: 14, fontWeight: 'bold', fill: colors.bg },
+      style: { fontFamily, fontSize: 14, fontWeight: 'bold', fill: colors.gold },
     });
-    text.position.set(3, -33);
+    // Beside the pennant rather than on it: the label is wider than the flag.
+    text.position.set(30, -36);
     view.addChild(pole, text);
     this.markerLayer.addChild(view);
     this.markers.push({ seconds: secondsToReach(multiplier), view });

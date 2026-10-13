@@ -47,6 +47,8 @@ export interface ScratchSceneOptions {
   stats: CardStats;
   wallet: Wallet;
   sounds: SoundManager;
+  /** The game, for the stats-panel toggle. */
+  perf?: { debug: boolean };
   server: OutcomeService<CardRequest, CardOutcome>;
 }
 
@@ -68,12 +70,13 @@ export class ScratchScene extends Scene {
   private result: RoundResult<CardOutcome> | null = null;
   private lastScratchSound = 0;
 
-  constructor({ artwork, renderer, stats, wallet, sounds, server }: ScratchSceneOptions) {
+  constructor({ artwork, renderer, stats, wallet, sounds, server, perf }: ScratchSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
 
     this.hud = new GameHud({
+      stats: perf,
       title: 'SCRATCH CARD',
       wallet,
       sounds,
@@ -126,16 +129,14 @@ export class ScratchScene extends Scene {
       this.odds.position.set(83, centerY - table.height / 2);
       hud.placeControls(1060, 339, { stacked: true });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
-      hud.mute.position.set(width - 54, 44);
-      hud.music.position.set(width - 122, 44);
+      hud.placeToggles(width - 54, 44);
     } else {
       hud.placeHeader(cx, 143);
       hud.message.position.set(cx, 212);
       hud.placeControls(cx, 846, { spread: 207 });
       hud.panel.position.set(cx - hud.panelWidth / 2, 956);
       this.odds.position.set(cx - table.width / 2, 1050);
-      hud.mute.position.set(width - 57, 51);
-      hud.music.position.set(width - 125, 51);
+      hud.placeToggles(width - 57, 51);
     }
     this.cabinet.arrange(viewport, cx, card.y + CARD_HEIGHT * scale);
   }
