@@ -81,6 +81,12 @@ export class Wallet {
     this.setBet(next);
   }
 
+  /** Max bet: the highest level the balance covers, or the lowest level if none is covered. */
+  maxBet(): void {
+    const affordable = this.betLevels.filter((level) => level <= this._balance);
+    this.setBet(affordable[affordable.length - 1] ?? this.betLevels[0]!);
+  }
+
   /** Takes the stake. Returns false, and changes nothing, if the balance is too low. */
   debit(amount: number = this._bet): boolean {
     assertAmount(amount);

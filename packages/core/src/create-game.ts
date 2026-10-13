@@ -1,6 +1,7 @@
 import { Application, Container } from 'pixi.js';
 import { attachDebugOverlay } from './debug-overlay';
 import { SceneManager, type Viewport } from './scene';
+import { localStore } from './storage';
 
 export interface GameOptions {
   /** Element the canvas is appended to. */
@@ -13,7 +14,10 @@ export interface GameOptions {
   background?: string;
   /** Caps devicePixelRatio to keep fill-rate sane on high-DPI phones. */
   maxResolution?: number;
-  /** Shows FPS and draw calls. Defaults to on when the URL has `?debug=1`. */
+  /**
+   * Shows FPS and draw calls. Defaults to on when the URL has `?debug=1`, or when the player left
+   * the stats panel open in the hub or any game.
+   */
   debug?: boolean;
   /** Extra lines for the debug panel, e.g. the current quality tier. */
   debugInfo?: () => string;
@@ -25,11 +29,14 @@ export interface Game {
   root: Container;
   scenes: SceneManager;
   readonly viewport: Viewport;
-  /** Whether the stats panel (FPS, draw calls…) is showing. */
+  /** Whether the stats panel (FPS, draw calls…) is showing. Setting it is remembered. */
   debug: boolean;
   destroy(): void;
 }
 
+/** Shared by the hub and every game, so the stats toggle carries between them. */
+const STATS_KEY = 'lab:stats';
+const statsStore = localStore();
 const debugFromQuery = () => new URLSearchParams(window.location.search).get('debug') === '1';
 
 export async function createGame(options: GameOptions): Promise<Game> {
@@ -40,7 +47,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     portrait,
     background = '#0b0b14',
     maxResolution = 2,
-    debug = debugFromQuery(),
+    debug = debugFromQuery() || statsStore.get(STATS_KEY) === '1',
     debugInfo,
   } = options;
 
@@ -114,6 +121,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
       return detachDebug !== undefined;
     },
     set debug(on: boolean) {
+      statsStore.set(STATS_KEY, on ? '1' : '0');
       if (on && !detachDebug) detachDebug = attachDebugOverlay(app, debugInfo);
       if (!on && detachDebug) {
         detachDebug();

@@ -33,6 +33,8 @@ export interface SlotSceneOptions {
   stats: SlotStats;
   wallet: Wallet;
   sounds: SoundManager;
+  /** The game, for the stats-panel toggle. */
+  perf?: { debug: boolean };
   server: OutcomeService<SpinRequest, SpinOutcome>;
 }
 
@@ -52,12 +54,13 @@ export class SlotScene extends Scene {
   /** Last result shown, so a failed round can land the reels back where they were. */
   private lastStops = REEL_STRIPS.map(() => 0);
 
-  constructor({ artwork, textures, stats, wallet, sounds, server }: SlotSceneOptions) {
+  constructor({ artwork, textures, stats, wallet, sounds, server, perf }: SlotSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
 
     this.hud = new GameHud({
+      stats: perf,
       title: 'MINI SLOT',
       wallet,
       sounds,
@@ -109,8 +112,7 @@ export class SlotScene extends Scene {
         stacked: true,
       });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
-      hud.mute.position.set(width - 54, 44);
-      hud.music.position.set(width - 122, 44);
+      hud.placeToggles(width - 54, 44);
     } else {
       hud.placeHeader(cx, 143);
       this.machine.position.set(cx - SlotMachine.WIDTH / 2, 238);
@@ -120,8 +122,7 @@ export class SlotScene extends Scene {
       hud.betCaption.position.set(cx, controlsY + 61);
       hud.panel.position.set(cx - hud.panelWidth / 2, 906);
       this.paytable.position.set(cx - table.width / 2, 1014);
-      hud.mute.position.set(width - 57, 51);
-      hud.music.position.set(width - 125, 51);
+      hud.placeToggles(width - 57, 51);
     }
     this.cabinet.arrange(viewport, this.machine.x, this.machine.y, SlotMachine.WIDTH);
   }

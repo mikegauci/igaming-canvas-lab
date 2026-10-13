@@ -59,6 +59,7 @@ await game.scenes.change(
     // Same storage key as the hub and other games, so the balance carries between them.
     wallet: new Wallet({ betLevels: BET_LEVELS, defaultBet: 25 }),
     sounds,
+    perf: game,
     server: new MockOutcomeServer(resolveSpin, { seed: seedFromQuery() }),
   }),
 );

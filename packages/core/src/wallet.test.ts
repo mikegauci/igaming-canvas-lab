@@ -34,6 +34,18 @@ describe('Wallet', () => {
     expect(() => wallet.debit(0.5)).toThrow(RangeError);
   });
 
+  it('max bet picks the highest level the balance covers', () => {
+    const wallet = make();
+    wallet.maxBet();
+    expect(wallet.bet).toBe(10);
+    wallet.debit(93);
+    wallet.maxBet();
+    expect(wallet.bet).toBe(5);
+    wallet.debit(7);
+    wallet.maxBet();
+    expect(wallet.bet).toBe(1);
+  });
+
   it('persists the balance so it carries between the hub and the games', () => {
     const store = memoryStore();
     const first = new Wallet({ store, initialBalance: 100 });

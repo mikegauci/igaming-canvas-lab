@@ -7,7 +7,6 @@ import { PostEffects } from './post';
 import { Quality } from './quality';
 
 const INTRO_KEY = 'lab:intro-seen';
-const STATS_KEY = 'lab:floor-stats';
 
 export interface FloorHandle {
   /** Plays the boot animation, if this visit has one; call once the floor is on screen. */
@@ -58,25 +57,15 @@ export async function startFloor(
     post.apply(settings);
   });
 
-  // The stats panel follows the pulse button, and remembers the choice across visits.
+  // The stats panel follows the pulse button; the game remembers the choice across visits.
   const stats = {
     get on() {
       return game.debug;
     },
     set on(value: boolean) {
       game.debug = value;
-      try {
-        localStorage.setItem(STATS_KEY, value ? '1' : '0');
-      } catch {
-        // Not remembering it is fine.
-      }
     },
   };
-  try {
-    if (localStorage.getItem(STATS_KEY) === '1') game.debug = true;
-  } catch {
-    // Storage blocked: start with the panel hidden (unless ?debug=1).
-  }
 
   const sounds = new SoundManager();
   sounds.synth({
