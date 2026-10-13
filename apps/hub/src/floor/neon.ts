@@ -32,6 +32,28 @@ export function neonStyle(
   };
 }
 
+/**
+ * Small HUD text in a neon colour, built for legibility over a busy, glowing backdrop: a solid
+ * coloured fill with a dark outline, then a softer glow. A pale tube core reads fine at title
+ * size but blurs into its own glow on small text.
+ */
+export function hudStyle(
+  color: number,
+  size: number,
+  extra: TextStyleOptions = {},
+): TextStyleOptions {
+  return {
+    fontFamily: displayFont,
+    fontSize: size,
+    fontWeight: '700',
+    fill: tubeCore(color, 0.3),
+    stroke: { color: 0x12041f, width: Math.max(3, size * 0.22), join: 'round' },
+    dropShadow: { color, blur: size * 0.5, distance: 0, alpha: 0.55, angle: 0 },
+    padding: size * 0.6,
+    ...extra,
+  };
+}
+
 /** Stutter pattern for a tube striking: [time in s, alpha]. */
 const STRIKE: [number, number][] = [
   [0, 0],
