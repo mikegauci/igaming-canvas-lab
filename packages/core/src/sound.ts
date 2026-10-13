@@ -1,16 +1,20 @@
 import { sound, type PlayOptions } from '@pixi/sound';
+import { BackgroundMusic } from './background-music';
 import { localStore, type KeyValueStore } from './storage';
 import { renderWav, type Tone } from './synth';
 
 type Listener = (muted: boolean) => void;
 
 /**
- * Thin wrapper over @pixi/sound with a mute toggle that is remembered across visits.
+ * Sound effects and shared retrowave music with a mute toggle remembered across visits.
  * Sounds come from Assets (importing @pixi/sound registers the audio loader) or from `synth`.
  */
 export class SoundManager {
   private _muted: boolean;
   private listeners = new Set<Listener>();
+  private readonly music?: BackgroundMusic;
+  private readonly detach: () => void;
+  private destroyed = false;
 
   constructor(
     private readonly store: KeyValueStore = localStore(),
@@ -18,24 +22,52 @@ export class SoundManager {
   ) {
     this._muted = store.get(storageKey) === '1';
     if (this._muted) sound.muteAll();
+    else sound.unmuteAll();
+    const context = sound.context.audioContext;
+    if (context) this.music = new BackgroundMusic(context, this._muted);
 
     // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
-    // events; keyboard players (Space = spin) need this too. Keep listening until the context
-    // is actually running: some keys (e.g. Escape) don't count as a gesture.
+    // events; keyboard players (Space = spin) need this too. Keep gesture listeners so audio
+    // can also recover if a mobile browser interrupts the context later.
+    let pageActive = true;
     const stopListening = () => {
       window.removeEventListener('keydown', unlock);
       window.removeEventListener('pointerdown', unlock);
     };
+    const ready = () => {
+      if (this.destroyed || (context && context.state !== 'running')) return;
+      if (pageActive && !document.hidden) void this.music?.start();
+    };
     const unlock = () => {
-      const context = sound.context.audioContext;
-      if (!context || context.state === 'running') return stopListening();
-      context.resume().then(
-        () => context.state === 'running' && stopListening(),
-        () => undefined,
-      );
+      if (this.destroyed || !pageActive || document.hidden) return;
+      if (!context || context.state === 'running') return ready();
+      void context.resume().then(ready, () => undefined);
+    };
+    const visibility = () => {
+      if (document.hidden) this.music?.pause();
+      else unlock();
+    };
+    const pagehide = () => {
+      pageActive = false;
+      this.music?.pause();
+    };
+    const pageshow = () => {
+      pageActive = true;
+      visibility();
     };
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
+    window.addEventListener('pagehide', pagehide);
+    window.addEventListener('pageshow', pageshow);
+    document.addEventListener('visibilitychange', visibility);
+    this.detach = () => {
+      stopListening();
+      window.removeEventListener('pagehide', pagehide);
+      window.removeEventListener('pageshow', pageshow);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+    // Navigation within an already-activated site may allow an immediate resume.
+    unlock();
   }
 
   get muted(): boolean {
@@ -47,6 +79,7 @@ export class SoundManager {
     this._muted = muted;
     if (muted) sound.muteAll();
     else sound.unmuteAll();
+    this.music?.setMuted(muted);
     this.store.set(this.storageKey, muted ? '1' : '0');
     for (const listener of this.listeners) listener(muted);
   }
@@ -74,5 +107,12 @@ export class SoundManager {
   onChange(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    this.detach();
+    this.music?.destroy();
+    this.listeners.clear();
   }
 }

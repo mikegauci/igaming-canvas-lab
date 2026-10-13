@@ -5,9 +5,11 @@
 Game symbols, cabinet frames, mountains and characters are drawn in code with PixiJS `Graphics`
 or GLSL shaders. The retrowave cabinet illustrations in `design/retrowave-cabinets/artwork/`
 were generated with OpenAI's image tool; Mini Slot reuses the Miami illustration for its backdrop
-and marquee, while Lucky Wheel reuses the cosmic star illustration. Every sound is synthesized
-at startup by `renderWav()` in `@lab/core`. Mini Slot and Lucky Wheel use Orbitron, and the
-Casino Floor uses both fonts below, self-hosted from Fontsource:
+and marquee, while Lucky Wheel reuses the cosmic star illustration. Sound effects are synthesized
+at startup by `renderWav()` in `@lab/core`.
+The original retrowave soundtrack is composed in `retrowave.ts` and synthesized on audio unlock;
+it uses no third-party recordings. Mini Slot and Lucky Wheel use Orbitron, and the Casino Floor
+uses both fonts below, self-hosted from Fontsource:
 
 | Font                                                   | Licence                   |
 | ------------------------------------------------------ | ------------------------- |
