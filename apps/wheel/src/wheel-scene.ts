@@ -4,16 +4,16 @@ import {
   GameHud,
   Scene,
   StateMachine,
-  type OddsTable,
   type OutcomeService,
   type SoundManager,
   type Viewport,
   type Wallet,
 } from '@lab/core';
-import type { Renderer, Ticker } from 'pixi.js';
+import type { Renderer, Texture, Ticker } from 'pixi.js';
 import type { WheelOutcome, WheelRequest, WheelStats } from './logic/prizes';
-import { createOddsTable } from './view/odds';
-import { PrizeWheel, RADIUS } from './view/wheel';
+import { PrizeOddsPanel } from './view/odds';
+import { PrizeWheel } from './view/wheel';
+import { WheelCabinet } from './view/cabinet';
 
 type State = 'idle' | 'spinning' | 'landing' | 'presenting';
 type Event = 'spin' | 'result' | 'failed' | 'landed' | 'done';
@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<State, string> = {
 };
 
 export interface WheelSceneOptions {
+  artwork: Texture;
   renderer: Renderer;
   stats: WheelStats;
   wallet: Wallet;
@@ -47,10 +48,11 @@ export class WheelScene extends Scene {
   });
   private readonly hud: GameHud;
   private readonly wheel: PrizeWheel;
-  private readonly odds: OddsTable;
+  private readonly odds: PrizeOddsPanel;
+  private readonly cabinet: WheelCabinet;
   private lastTick = 0;
 
-  constructor({ renderer, stats, wallet, sounds, server }: WheelSceneOptions) {
+  constructor({ artwork, renderer, stats, wallet, sounds, server }: WheelSceneOptions) {
     super();
     this.sounds = sounds;
     this.server = server;
@@ -60,7 +62,9 @@ export class WheelScene extends Scene {
       wallet,
       sounds,
       actionLabel: ACTION_LABELS.idle,
-      actionSize: 130,
+      actionSize: 124,
+      panelWidth: 560,
+      appearance: 'arcade',
     });
     this.hud.onAction = () => this.onAction();
     this.wheel = new PrizeWheel(renderer);
@@ -70,42 +74,54 @@ export class WheelScene extends Scene {
       this.lastTick = now;
       sounds.play('tick');
     };
-    this.odds = createOddsTable(stats);
+    this.odds = new PrizeOddsPanel(stats);
+    this.cabinet = new WheelCabinet(artwork);
+    this.hud.message.style.fontSize = 16;
+    this.hud.message.style.wordWrap = true;
+    this.hud.message.style.align = 'center';
+    this.hud.betCaption.style.fontSize = 11;
+    this.hud.betCaption.text = 'TOTAL BET';
 
-    this.addChild(this.odds, this.wheel, this.hud);
+    this.addChild(this.cabinet, this.odds, this.wheel, this.hud);
     this.round.onChange((state) => {
       this.hud.action.text = ACTION_LABELS[state];
       this.hud.setBetting(state === 'idle');
     });
-    this.hud.say('Press SPIN or Space');
+    this.hud.say('Ready when you are');
   }
 
   override update(ticker: Ticker): void {
     this.wheel.update(ticker);
+    this.cabinet.update(ticker.deltaMS / 1000);
   }
 
-  override resize({ width, height, orientation }: Viewport): void {
+  override resize(viewport: Viewport): void {
+    const { width, height, orientation } = viewport;
     const { hud } = this;
+    const cx = width / 2;
+    const table = this.odds.arrange(orientation);
+    hud.message.style.wordWrapWidth = orientation === 'landscape' ? 232 : 560;
+    hud.betCaption.visible = orientation === 'landscape';
     if (orientation === 'landscape') {
-      const table = this.odds.arrange(1);
-      const column = 970;
-      this.wheel.position.set(440, 375);
-      hud.placeHeader(column, 70);
-      this.odds.position.set(column - table.width / 2, 150);
-      hud.placeControls(column, 150 + table.height + 90, { spread: 130 });
-      hud.panel.position.set(column - hud.panelWidth / 2, height - 92);
-      hud.mute.position.set(width - 48, 44);
+      this.wheel.position.set(cx, 395);
+      this.wheel.scale.set(0.76);
+      hud.placeHeader(cx, 95);
+      hud.message.position.set(1060, 217);
+      this.odds.position.set(83, 395 - table.height / 2);
+      hud.placeControls(1060, 339, { stacked: true });
+      hud.panel.position.set(cx - hud.panelWidth / 2, height - 84);
+      hud.mute.position.set(width - 54, 44);
     } else {
-      const table = this.odds.arrange(2);
-      const cx = width / 2;
-      hud.placeHeader(cx, 70);
-      this.wheel.position.set(cx, 170 + RADIUS + 40);
-      const controlsY = this.wheel.y + RADIUS + 110;
-      hud.placeControls(cx, controlsY, { spread: 170 });
-      this.odds.position.set(cx - table.width / 2, controlsY + 104);
-      hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
-      hud.mute.position.set(width - 50, 60);
+      hud.placeHeader(cx, 143);
+      hud.message.position.set(cx, 212);
+      this.wheel.position.set(cx, 483);
+      this.wheel.scale.set(0.86);
+      hud.placeControls(cx, 846, { spread: 207 });
+      hud.panel.position.set(cx - hud.panelWidth / 2, 956);
+      this.odds.position.set(cx - table.width / 2, 1050);
+      hud.mute.position.set(width - 57, 51);
     }
+    this.cabinet.arrange(viewport, this.wheel.x, this.wheel.y);
   }
 
   override enter(): void {
