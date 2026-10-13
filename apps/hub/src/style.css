@@ -298,6 +298,42 @@ dialog button {
   cursor: pointer;
 }
 
+/* Replaces the bar once loaded when sound needs a tap first (src/loader.ts). */
+.loader-enter {
+  padding: 0.9em 1.8em;
+  border: 2px solid #3ef0ff;
+  border-radius: 3px;
+  background: rgba(7, 2, 15, 0.7);
+  color: #3ef0ff;
+  font:
+    700 clamp(0.8rem, 3vw, 1rem) Orbitron,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 8px rgba(62, 240, 255, 0.8);
+  box-shadow:
+    0 0 12px rgba(62, 240, 255, 0.6),
+    inset 0 0 8px rgba(62, 240, 255, 0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  animation: loader-pulse 1.6s ease-in-out infinite alternate;
+}
+
+.loader-enter:hover,
+.loader-enter:focus-visible {
+  outline: none;
+  background: rgba(62, 240, 255, 0.15);
+  color: #fff;
+}
+
+@keyframes loader-pulse {
+  to {
+    box-shadow:
+      0 0 22px rgba(62, 240, 255, 0.9),
+      inset 0 0 12px rgba(62, 240, 255, 0.5);
+  }
+}
+
 .loader.failed .loader-status {
   color: #ff3ea5;
   text-shadow: 0 0 8px rgba(255, 62, 165, 0.8);
@@ -372,7 +408,8 @@ dialog button {
   .loader,
   .loader-sky::before,
   .loader-grid,
-  .loader-cursor {
+  .loader-cursor,
+  .loader-enter {
     animation: none;
   }
 

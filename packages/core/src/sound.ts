@@ -32,13 +32,21 @@ export class SoundManager {
     const context = sound.context.audioContext;
     if (context) this.music = new BackgroundMusic(context, this._musicMuted);
 
-    // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
-    // events; keyboard players (Space = spin) need this too. Keep gesture listeners so audio
-    // can also recover if a mobile browser interrupts the context later.
+    // iOS routes Web Audio through the ringer channel by default, so the silent switch mutes the
+    // whole site. Declaring playback makes it behave like media.
+    const audioSession = (navigator as Navigator & { audioSession?: { type: string } })
+      .audioSession;
+    if (audioSession) audioSession.type = 'playback';
+
+    // Browsers start audio suspended until a user gesture. On touch screens a tap only counts once
+    // the finger lifts (pointerup/touchend), not on pointerdown, so listen for every gesture event;
+    // keyboard players (Space = spin) need this too. Keep the listeners so audio can also recover
+    // if a mobile browser interrupts the context later.
+    const gestures = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
     let pageActive = true;
     const stopListening = () => {
-      window.removeEventListener('keydown', unlock);
-      window.removeEventListener('pointerdown', unlock);
+      for (const type of gestures) window.removeEventListener(type, unlock, true);
+      context?.removeEventListener('statechange', ready);
     };
     const ready = () => {
       if (this.destroyed || (context && context.state !== 'running')) return;
@@ -61,8 +69,10 @@ export class SoundManager {
       pageActive = true;
       visibility();
     };
-    window.addEventListener('keydown', unlock);
-    window.addEventListener('pointerdown', unlock);
+    for (const type of gestures) window.addEventListener(type, unlock, true);
+    // Start music whenever the context starts running, whoever resumed it (@pixi/sound unlocks
+    // on touchend too), so the first tap is always enough.
+    context?.addEventListener('statechange', ready);
     window.addEventListener('pagehide', pagehide);
     window.addEventListener('pageshow', pageshow);
     document.addEventListener('visibilitychange', visibility);
@@ -74,6 +84,18 @@ export class SoundManager {
     };
     // Navigation within an already-activated site may allow an immediate resume.
     unlock();
+  }
+
+  /**
+   * Whether the browser lets this page play audio right now, without waiting for a gesture.
+   * Some browsers allow it (e.g. Chrome for sites a player often uses); mobile ones don't.
+   */
+  async canPlayWithoutGesture(): Promise<boolean> {
+    const context = sound.context.audioContext;
+    if (!context || context.state === 'running') return true;
+    // A blocked resume can stay pending rather than reject, so give it a moment only.
+    await Promise.race([context.resume().catch(() => undefined), wait(150)]);
+    return (context.state as string) === 'running';
   }
 
   get muted(): boolean {
@@ -143,3 +165,5 @@ export class SoundManager {
     this.musicListeners.clear();
   }
 }
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
