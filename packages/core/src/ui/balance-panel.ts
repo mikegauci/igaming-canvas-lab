@@ -3,6 +3,7 @@ import { BitmapText, Container, Graphics } from 'pixi.js';
 import { colors, fontFamily } from '../theme';
 import { formatCredits, type Wallet } from '../wallet';
 import { Label } from './label';
+import { arcadeFont, metalFill } from './arcade-style';
 
 interface Field {
   value: BitmapText;
@@ -25,17 +26,39 @@ export class BalancePanel extends Container {
     private readonly wallet: Wallet,
     width = 720,
     height = 76,
+    appearance: 'classic' | 'arcade' = 'classic',
   ) {
     super();
     const bg = new Graphics()
       .roundRect(0, 0, width, height, 16)
       .fill({ color: colors.panel, alpha: 0.92 })
       .stroke({ color: colors.neon, alpha: 0.45, width: 2 });
+    if (appearance === 'arcade') {
+      bg.clear()
+        .roundRect(0, 0, width, height, 12)
+        .fill(metalFill())
+        .stroke({ color: 0xa3a5c7, width: 1 });
+      for (let i = 0; i < 3; i++) {
+        bg.roundRect(8 + (i * width) / 3, 7, width / 3 - 16, height - 14, 7)
+          .fill(0x090d20)
+          .stroke({ color: i === 1 ? colors.cyan : colors.neon, width: 1, alpha: 0.4 });
+      }
+    }
     this.addChild(bg);
 
     const field = (caption: string, index: number, color: number, initial: number): Field => {
       const x = (width * (index + 0.5)) / 3;
-      const label = new Label(caption, 'caption');
+      const label = new Label(
+        caption,
+        'caption',
+        appearance === 'arcade'
+          ? {
+              fontFamily: arcadeFont,
+              fontSize: 10,
+              fill: 0xb8bad2,
+            }
+          : {},
+      );
       label.anchor.set(0.5);
       label.position.set(x, height * 0.3);
       const value = new BitmapText({

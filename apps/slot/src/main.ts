@@ -1,5 +1,7 @@
 import '@lab/core/game.css';
+import './style.css';
 import { createGame, MockOutcomeServer, seedFromQuery, SoundManager, Wallet } from '@lab/core';
+import { Assets, type Texture } from 'pixi.js';
 import { BET_LEVELS } from './logic/config';
 import { resolveSpin } from './logic/evaluate';
 import { SlotScene } from './slot-scene';
@@ -10,7 +12,20 @@ const game = await createGame({
   designWidth: 1280,
   designHeight: 720,
   portrait: { width: 720, height: 1280 },
+  background: '#08091a',
 });
+
+const [artwork] = await Promise.all([
+  Assets.load<Texture>(`${import.meta.env.BASE_URL}art/miami-night.webp`),
+  Promise.race([
+    Promise.all(
+      ['700 16px Orbitron', '900 16px Orbitron'].map((font) =>
+        document.fonts.load(font).catch(() => []),
+      ),
+    ),
+    new Promise((resolve) => setTimeout(resolve, 1500)),
+  ]),
+]);
 
 const sounds = new SoundManager();
 sounds.synth({
@@ -38,6 +53,7 @@ sounds.synth({
 
 await game.scenes.change(
   new SlotScene({
+    artwork,
     textures: createSymbolTextures(game.app.renderer),
     stats: __SLOT_STATS__,
     // Same storage key as the hub and other games, so the balance carries between them.

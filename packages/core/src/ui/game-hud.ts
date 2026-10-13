@@ -11,6 +11,7 @@ import { BalancePanel } from './balance-panel';
 import { Button } from './button';
 import { Label } from './label';
 import { MuteButton } from './mute-button';
+import { arcadeFont, chromeFill } from './arcade-style';
 
 export interface GameHudOptions {
   title: string;
@@ -28,6 +29,8 @@ export interface GameHudOptions {
   panelWidth?: number;
   /** Shared badges; defaults to the ones in localStorage. */
   achievements?: Achievements;
+  /** Opt-in cabinet treatment; existing games retain their default appearance. */
+  appearance?: 'classic' | 'arcade';
 }
 
 export type RoundStart<TOutcome> =
@@ -79,6 +82,7 @@ export class GameHud extends Container {
     betTitles = ['Lower bet', 'Raise bet'],
     panelWidth = 520,
     achievements = new Achievements(),
+    appearance = 'classic',
   }: GameHudOptions) {
     super();
     this.achievements = achievements;
@@ -89,6 +93,17 @@ export class GameHud extends Container {
 
     this.title = new Label(title, 'title', {
       dropShadow: { color: colors.neon, blur: 12, distance: 0, alpha: 0.9 },
+      ...(appearance === 'arcade'
+        ? {
+            fontFamily: arcadeFont,
+            fontWeight: '900',
+            fontStyle: 'italic',
+            fontSize: 48,
+            fill: chromeFill(),
+            stroke: { color: 0x09091a, width: 5, join: 'round' },
+            padding: 16,
+          }
+        : {}),
     });
     this.title.anchor.set(0.5);
     this.message.anchor.set(0.5);
@@ -99,6 +114,7 @@ export class GameHud extends Container {
       width: actionWidth,
       height: actionSize,
       fontSize: Math.round(actionSize * 0.22),
+      appearance,
     });
     const betButton = (label: string, title: string, shortcut: string) =>
       new Button({
@@ -109,13 +125,14 @@ export class GameHud extends Container {
         height: 64,
         fontSize: 34,
         color: colors.cyan,
+        appearance,
       });
     this.betDown = betButton('−', betTitles[0], 'Arrow Down');
     this.betUp = betButton('+', betTitles[1], 'Arrow Up');
     this.betCaption = new Label(betCaption, 'caption');
     this.betCaption.anchor.set(0.5);
-    this.panel = new BalancePanel(wallet, panelWidth);
-    this.mute = new MuteButton(sounds);
+    this.panel = new BalancePanel(wallet, panelWidth, 76, appearance);
+    this.mute = new MuteButton(sounds, 56, appearance);
 
     this.action.onPress = () => this.onAction?.();
     this.betDown.onPress = () => this.changeBet(-1);

@@ -2,10 +2,11 @@
 
 ## Assets
 
-There are no third-party art or sound assets. Every symbol, cabinet, mountain and character is
-drawn in code with PixiJS `Graphics` or GLSL shaders, and every sound is synthesized at startup by
-`renderWav()` in `@lab/core`. The games use the system UI font; the Casino Floor uses two web
-fonts, self-hosted from Fontsource:
+Game symbols, cabinet frames, mountains and characters are drawn in code with PixiJS `Graphics`
+or GLSL shaders. The retrowave cabinet illustrations in `design/retrowave-cabinets/artwork/`
+were generated with OpenAI's image tool; Mini Slot reuses the Miami illustration for its backdrop
+and marquee. Every sound is synthesized at startup by `renderWav()` in `@lab/core`. Mini Slot
+uses Orbitron, and the Casino Floor uses both fonts below, self-hosted from Fontsource:
 
 | Font                                                   | Licence                   |
 | ------------------------------------------------------ | ------------------------- |
