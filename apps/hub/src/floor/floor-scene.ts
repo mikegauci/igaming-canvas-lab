@@ -13,11 +13,11 @@ import {
   type Wallet,
 } from '@lab/core';
 import { gsap } from 'gsap';
-import { BitmapText, Container, Graphics, Rectangle, type Texture, type Ticker } from 'pixi.js';
+import { Container, Graphics, Rectangle, Text, type Texture, type Ticker } from 'pixi.js';
 import { Backdrop } from './backdrop';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
-import { displayFont } from './fonts';
 import { GAMES } from './games';
+import { NeonTitle, neonStyle, strike, tubeCore, unlitStyle } from './neon';
 
 export interface FloorSceneOptions {
   wallet: Wallet;
@@ -58,24 +58,14 @@ export class FloorScene extends Scene {
   private readonly backdrop = new Backdrop();
   private readonly world = new Container();
   private readonly cabinets: Cabinet[];
-  private readonly title = new Label('iGAMING CANVAS LAB', 'title', {
-    fontFamily: displayFont,
-    fontSize: 40,
-    fontWeight: '900',
-    dropShadow: { color: colors.neon, blur: 14, distance: 0, alpha: 0.95 },
-  });
-  private readonly subtitle = new Label('THE CASINO FLOOR', 'caption', {
-    fontFamily: displayFont,
-    fontWeight: '500',
-    letterSpacing: 6,
-  });
+  private readonly title = new NeonTitle();
   private readonly caption = new Label('', 'body', { fontSize: 20 });
   private readonly hint = new Label('', 'caption');
-  private readonly credits: BitmapText;
+  private readonly credits: Text;
   private readonly badges = new Container();
   private readonly hireMe = new Container();
   private readonly hireMeSign: Graphics;
-  private readonly hireMeText: Label;
+  private readonly hireMeText: Text;
   private readonly mute: MuteButton;
   private readonly dots = new Graphics();
   private readonly confetti: Confetti;
@@ -114,14 +104,9 @@ export class FloorScene extends Scene {
     });
     this.world.addChild(...this.cabinets);
 
-    this.title.anchor.set(0.5);
-    this.subtitle.anchor.set(0.5);
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
-    this.credits = new BitmapText({
-      text: '',
-      style: { fontFamily: displayFont, fontSize: 20, fontWeight: '700', fill: colors.gold },
-    });
+    this.credits = new Text({ text: '', style: neonStyle(colors.gold, 18, { letterSpacing: 1 }) });
     this.credits.anchor.set(0, 0.5);
     const renderCredits = () => (this.credits.text = `CREDITS ${formatCredits(wallet.balance)}`);
     renderCredits();
@@ -129,13 +114,7 @@ export class FloorScene extends Scene {
 
     this.buildBadges(achievements);
     this.hireMeSign = new Graphics();
-    this.hireMeText = new Label('HIRE ME', 'body', {
-      fontFamily: displayFont,
-      fontSize: 22,
-      fontWeight: '900',
-      fill: colors.neon,
-      letterSpacing: 4,
-    });
+    this.hireMeText = new Text({ text: 'HIRE ME' });
     this.hireMeText.anchor.set(0.5);
     this.hireMe.addChild(this.hireMeSign, this.hireMeText);
     this.drawHireMe();
@@ -176,7 +155,6 @@ export class FloorScene extends Scene {
       this.backdrop,
       this.world,
       this.title,
-      this.subtitle,
       this.credits,
       this.badges,
       this.hireMe,
@@ -211,8 +189,8 @@ export class FloorScene extends Scene {
         cabinet.scale.set(1);
         cabinet.position.set(left + i * spacing, ground);
       });
-      this.title.position.set(width / 2, 52);
-      this.subtitle.position.set(width / 2, 92);
+      this.title.layout(1);
+      this.title.position.set(width / 2, 56);
       this.credits.position.set(28, 36);
       this.badges.position.set(30, 76);
       this.hireMe.position.set(width - 160, 44);
@@ -229,8 +207,8 @@ export class FloorScene extends Scene {
         cabinet.scale.set(1.5);
         cabinet.position.set(width / 2 + i * spacing, ground);
       });
-      this.title.position.set(width / 2, 70);
-      this.subtitle.position.set(width / 2, 112);
+      this.title.layout(0.74);
+      this.title.position.set(width / 2, 72);
       this.credits.position.set(28, 168);
       this.badges.position.set(30, 206);
       this.hireMe.position.set(width - 130, 186);
@@ -265,6 +243,7 @@ export class FloorScene extends Scene {
 
   override destroy(...args: Parameters<Scene['destroy']>): void {
     this.exit();
+    this.introTimeline?.kill();
     gsap.killTweensOf([this, this.curtain, this.introLayer, this.world, this.world.scale]);
     super.destroy(...args);
   }
@@ -274,6 +253,7 @@ export class FloorScene extends Scene {
     this.time += seconds;
     for (const cabinet of this.cabinets) cabinet.update(seconds, this.time);
     this.backdrop.update(seconds);
+    this.title.update(seconds);
     this.confetti.tick(seconds);
 
     // Ease the camera; in landscape it also drifts a little with the pointer for depth.
@@ -291,6 +271,7 @@ export class FloorScene extends Scene {
   startIntro(): void {
     // A key pressed during loading may already have skipped it.
     if (this.introActive) this.introTimeline?.play();
+    else this.title.shine();
   }
 
   private get achievementsComplete(): boolean {
@@ -428,17 +409,24 @@ export class FloorScene extends Scene {
     achievements.onChange(draw);
   }
 
+  /** A neon tube sign: dark glass until every badge is earned, then lit (and flickering). */
   private drawHireMe() {
     const lit = this.achievementsComplete;
-    this.hireMeSign
-      .clear()
-      .roundRect(-78, -24, 156, 48, 14)
-      .fill({ color: colors.bg, alpha: 0.85 })
-      .stroke({ color: colors.neon, width: 3, alpha: lit ? 1 : 0.35 });
-    this.hireMeText.alpha = lit ? 1 : 0.35;
-    this.hireMeText.style.dropShadow = lit
-      ? { color: colors.neon, blur: 14, distance: 0, alpha: 1, angle: 0 }
-      : false;
+    const tube = () => this.hireMeSign.roundRect(-80, -26, 160, 52, 16);
+    this.hireMeSign.clear();
+    tube().fill({ color: 0x07020f, alpha: 0.75 });
+    if (lit) {
+      tube().stroke({ color: colors.neon, width: 10, alpha: 0.22 });
+      tube().stroke({ color: colors.neon, width: 5, alpha: 0.5 });
+      tube().stroke({ color: tubeCore(colors.neon), width: 2.5 });
+    } else {
+      tube().stroke({ color: 0x5e3354, width: 3 });
+    }
+    const style = { letterSpacing: 4, fontWeight: '900' } as const;
+    this.hireMeText.style = lit
+      ? neonStyle(colors.neon, 20, style)
+      : unlitStyle(colors.neon, 20, style);
+    this.hireMeText.alpha = 1;
   }
 
   private trackKonami(event: KeyboardEvent) {
@@ -467,54 +455,56 @@ export class FloorScene extends Scene {
     }
   }
 
-  /** "INSERT COIN" boot: under 1.5 s, skippable with any key or tap. Paused until startIntro(). */
+  /**
+   * Power-on boot: the screen fades up on the horizon, the chrome title drops in, the neon script
+   * strikes with a buzz, the cabinets light up one by one and the HUD comes on. Under 2 s,
+   * skippable with any key or tap. Paused until startIntro().
+   */
   private playIntro() {
-    const { introLayer } = this;
-    const bg = new Graphics().rect(0, 0, 4000, 4000).fill(colors.bg);
-    const insert = new Label('INSERT COIN', 'title', {
-      fontFamily: displayFont,
-      fill: colors.gold,
-      letterSpacing: 6,
-    });
-    const start = new Label('PRESS START', 'title', {
-      fontFamily: displayFont,
-      fill: colors.neon,
-      letterSpacing: 6,
-      dropShadow: { color: colors.neon, blur: 16, distance: 0, alpha: 1 },
-    });
-    insert.anchor.set(0.5);
-    start.anchor.set(0.5);
-    start.alpha = 0;
-    introLayer.addChild(bg, insert, start);
+    const { introLayer, title, cabinets } = this;
+    const { sounds } = this.options;
+    const black = new Graphics().rect(-2000, -2000, 6000, 6000).fill(0x000000);
+    introLayer.addChild(black);
     introLayer.eventMode = 'static';
     this.introActive = true;
 
-    const place = () => {
-      const { width, height } = this.viewport;
-      insert.position.set(width / 2, height / 2);
-      start.position.set(width / 2, height / 2);
-    };
-    place();
+    const hud = [
+      this.credits,
+      this.badges,
+      this.hireMe,
+      this.mute,
+      this.caption,
+      this.hint,
+      this.dots,
+    ];
+    for (const target of [title.chrome, title.script, ...cabinets, ...hud]) target.alpha = 0;
 
     const finish = () => {
       if (introLayer.destroyed || !this.introActive) return;
       this.introActive = false;
-      tl.kill();
       window.removeEventListener('keydown', finish);
-      gsap.to(introLayer, {
-        alpha: 0,
-        duration: 0.25,
-        onComplete: () => introLayer.destroy({ children: true }),
-      });
+      // Skipping jumps to the end state, so nothing is left half-lit.
+      tl.progress(1).kill();
+      introLayer.destroy({ children: true });
     };
     const tl = gsap
       .timeline({ paused: true, onComplete: finish })
-      .call(place)
-      .to(insert, { alpha: 0.2, duration: 0.12, yoyo: true, repeat: 3 })
-      .call(() => this.options.sounds.play('coin'))
-      .to(insert, { alpha: 0, duration: 0.1 })
-      .to(start, { alpha: 1, duration: 0.1 })
-      .to(start.scale, { x: 1.15, y: 1.15, duration: 0.25, yoyo: true, repeat: 1 });
+      .to(black, { alpha: 0, duration: 0.6, ease: 'power2.out' }, 0)
+      .fromTo(
+        title.chrome,
+        { alpha: 0, y: -50 },
+        { alpha: 1, y: 0, duration: 0.5, ease: 'back.out(2)' },
+        0.25,
+      )
+      .call(() => title.shine(), undefined, 0.75)
+      .call(() => sounds.play('buzz'), undefined, 0.8);
+    strike(tl, title.script, 0.8);
+    cabinets.forEach((cabinet, i) => {
+      const at = 1.15 + i * 0.1;
+      tl.call(() => sounds.play('blip'), undefined, at);
+      strike(tl, cabinet, at);
+    });
+    tl.to(hud, { alpha: 1, duration: 0.3 }, 1.75);
     this.introTimeline = tl;
     introLayer.on('pointertap', finish);
     window.addEventListener('keydown', finish, { once: true });

@@ -4,12 +4,13 @@
 
 There are no third-party art or sound assets. Every symbol, cabinet, mountain and character is
 drawn in code with PixiJS `Graphics` or GLSL shaders, and every sound is synthesized at startup by
-`renderWav()` in `@lab/core`. The games use the system UI font; the Casino Floor uses a web
-font, self-hosted from Fontsource:
+`renderWav()` in `@lab/core`. The games use the system UI font; the Casino Floor uses two web
+fonts, self-hosted from Fontsource:
 
-| Font                                                | Licence                   |
-| --------------------------------------------------- | ------------------------- |
-| [Orbitron](https://github.com/theleagueof/orbitron) | SIL Open Font License 1.1 |
+| Font                                                   | Licence                   |
+| ------------------------------------------------------ | ------------------------- |
+| [Orbitron](https://github.com/theleagueof/orbitron)    | SIL Open Font License 1.1 |
+| [Mr Dafoe](https://fonts.google.com/specimen/Mr+Dafoe) | SIL Open Font License 1.1 |
 
 ## Libraries
 

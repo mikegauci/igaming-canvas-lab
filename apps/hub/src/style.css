@@ -1,7 +1,8 @@
-/* Orbitron for the boot screen and the floor (the floor waits for these in floor/fonts.ts). */
+/* Fonts for the boot screen and the floor (the floor waits for them in floor/fonts.ts). */
 @import '@fontsource/orbitron/latin-500.css';
 @import '@fontsource/orbitron/latin-700.css';
 @import '@fontsource/orbitron/latin-900.css';
+@import '@fontsource/mr-dafoe/latin-400.css';
 
 :root {
   color-scheme: dark;
