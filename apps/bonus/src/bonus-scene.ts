@@ -115,6 +115,7 @@ export class BonusScene extends Scene {
       hud.placeControls(1130, 300, { stacked: true });
       hud.panel.position.set(640 - hud.panelWidth / 2, height - 92);
       hud.mute.position.set(width - 48, 44);
+      hud.music.position.set(width - 116, 44);
     } else {
       const cx = width / 2;
       hud.placeHeader(cx, 70);
@@ -126,6 +127,7 @@ export class BonusScene extends Scene {
       hud.placeControls(cx, 940, { spread: 180 });
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
       hud.mute.position.set(width - 50, 60);
+      hud.music.position.set(width - 118, 60);
     }
   }
 
