@@ -103,9 +103,9 @@ export class BonusScene extends Scene {
     this.overlay.update(ticker.deltaMS / 1000);
   }
 
-  override resize({ width, height, orientation }: Viewport): void {
+  override resize({ width, height, orientation, screen }: Viewport): void {
     const { hud } = this;
-    this.overlay.resize(width, height);
+    this.overlay.resize(width, height, screen);
     if (orientation === 'landscape') {
       hud.placeHeader(640, 60);
       this.mascot.position.set(190, 560);

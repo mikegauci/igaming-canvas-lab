@@ -54,7 +54,7 @@ export class SlotCabinet extends Container {
   }
 
   arrange(
-    { width, height, orientation }: Viewport,
+    { width, height, orientation, screen }: Viewport,
     machineX: number,
     machineY: number,
     machineWidth: number,
@@ -62,15 +62,16 @@ export class SlotCabinet extends Container {
     const portrait = orientation === 'portrait';
     this.hint.text = portrait ? 'TAP TO SPIN · + / − BET' : 'SPACE TO SPIN · ↑ ↓ BET';
     const cx = width / 2;
+    // The art and its shade cover the whole window, letterbox bars included.
     const scale = Math.max(
-      width / this.backdrop.texture.width,
-      height / this.backdrop.texture.height,
+      screen.width / this.backdrop.texture.width,
+      screen.height / this.backdrop.texture.height,
     );
     this.backdrop.scale.set(scale);
     this.backdrop.position.set(cx, height / 2);
     this.shade
       .clear()
-      .rect(0, 0, width, height)
+      .rect(screen.x, screen.y, screen.width, screen.height)
       .fill(
         verticalGradient([
           [0, '#09091a'],
