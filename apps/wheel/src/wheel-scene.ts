@@ -93,6 +93,10 @@ export class WheelScene extends Scene {
     this.hud.say('Ready when you are');
   }
 
+  override idle(): boolean {
+    return this.round.state === 'idle';
+  }
+
   override update(ticker: Ticker): void {
     this.wheel.update(ticker);
     this.cabinet.update(ticker.deltaMS / 1000);

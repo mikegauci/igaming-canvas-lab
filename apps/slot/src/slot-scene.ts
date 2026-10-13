@@ -89,6 +89,10 @@ export class SlotScene extends Scene {
     this.hud.say('Ready when you are');
   }
 
+  override idle(): boolean {
+    return this.round.state === 'idle';
+  }
+
   override update(ticker: Ticker): void {
     this.machine.update(ticker);
     this.cabinet.update(ticker.deltaMS / 1000);

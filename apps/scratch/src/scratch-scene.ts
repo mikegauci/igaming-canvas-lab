@@ -106,6 +106,10 @@ export class ScratchScene extends Scene {
     this.hud.say('Buy a card, then scratch it');
   }
 
+  override idle(): boolean {
+    return this.round.state === 'idle';
+  }
+
   override update(ticker: Ticker): void {
     this.confetti.tick(ticker.deltaMS / 1000);
     this.cabinet.update(ticker.deltaMS / 1000);

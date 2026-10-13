@@ -17,6 +17,8 @@ import { neonStyle, tubeCore } from './neon';
 
 export const CABINET_WIDTH = 200;
 export const CABINET_HEIGHT = 410;
+/** Half the widest thing a cabinet draws (its floor light pool), from its centre. */
+export const CABINET_REACH = 160;
 /** Where the screen sits inside the cabinet (origin at the cabinet's bottom centre). */
 export const SCREEN_TOP = -334;
 
@@ -183,7 +185,7 @@ export class Cabinet extends Container {
 
     // Light pool and tube reflections on the floor, under everything else.
     for (let i = 5; i >= 1; i--) {
-      this.glow.ellipse(0, 4, 40 + i * 24, 6 + i * 5).fill({ color, alpha: 0.07 });
+      this.glow.ellipse(0, 4, CABINET_REACH - (5 - i) * 24, 6 + i * 5).fill({ color, alpha: 0.07 });
     }
     for (const x of [-W / 2 - 9, W / 2 + 9]) {
       for (let i = 0; i < 6; i++) {
