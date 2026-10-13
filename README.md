@@ -92,11 +92,11 @@ because cash-outs are judged on the server's clock while the round is running.
 
 ### Testing
 
-`pnpm test` runs 105 tests over the pure logic, in milliseconds and without a browser:
+`pnpm test` runs 111 tests over the pure logic, in milliseconds and without a browser:
 
 - exact RTP by enumerating every reel stop, cross-checked against seeded simulations
 - prizes, segments and stops drawn as often as their weights say
-- the wheel's angle maths round trip, the ease's shape and starting slope
+- the wheel's angle maths round trip, forward-only landing, speed matching and pointer contact
 - the scratch card's layouts and coverage grid geometry
 - the crash latency race on fake timers: a cash-out that looks safe on screen loses if it
   reaches the server after the crash
@@ -146,12 +146,12 @@ A 12-segment prize wheel. Space spins, and pressing it again makes the wheel lan
   figures.
 - **Angle maths.** `targetRotation()` finds the forward rotation, at least a minimum distance away,
   that puts the chosen spot under the pointer. Tests check this round trip on 500 random cases.
-- **Custom ease.** `createWheelEase()` decelerates on a power curve, creeps just past the target
-  and settles back with a cosine, so the pointer sometimes slips over a peg and back. The tween
-  duration is chosen so the ease's starting speed equals the free-spin speed, so there's no jolt
-  when the result arrives.
-- **Pointer flicks.** Pegs crossing the pointer, forwards or backwards, are counted from the
-  rotation each frame and kick the pointer with an elastic spring, plus a throttled tick sound.
+- **Forward-only landing.** `createWheelEase()` decelerates on a power curve to the exact result
+  without overshooting or reversing across a sector. Landing duration matches the free-spin
+  speed, and STOP replans from the current speed without a jolt.
+- **Pointer contact.** The rotor and flap update on the same Pixi frame clock. The flap flexes
+  as a peg approaches and passes, then springs home, including when a slow frame skips the
+  contact window. Sector crossings trigger the throttled tick sound.
 - **Cheap rendering.** The face (12 wedges, labels and pegs) is baked into one texture, and the
   rim bulbs share one tinted texture. About 10 draw calls per frame.
 

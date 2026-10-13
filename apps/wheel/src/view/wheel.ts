@@ -19,6 +19,7 @@ import {
   targetRotation,
 } from '../logic/geometry';
 import { SEGMENTS } from '../logic/prizes';
+import { pointerRotation } from '../logic/pointer';
 
 export const RADIUS = 270;
 const RIM = 22;
@@ -29,8 +30,8 @@ const SPIN_SPEED = 9;
 const MIN_LANDING_TRAVEL = 10;
 /** Minimum travel after STOP: a short, firm stop instead of the long crawl. */
 const HURRIED_TRAVEL = 1.5;
-/** How far the wheel creeps past its target before settling back, in segment widths. */
-const OVERSHOOT_SEGMENTS = 0.25;
+/** Seconds to accelerate from rest to the free-spin speed. */
+const SPIN_UP_SECONDS = 0.5;
 const COUNT = SEGMENTS.length;
 
 /** Dark enamel segments with neon edges; jackpot and ×10 retain their bright faces. */
@@ -126,12 +127,20 @@ export class PrizeWheel extends Container {
   private readonly bulbs: Sprite[];
   private readonly faceTexture: Texture;
   private readonly bulbTexture: Texture;
-  /** Free-spin speed (rad/s), driven by GSAP while spinning up. */
+  /** Free-spin speed (rad/s); all rotor and pointer motion uses the Pixi frame clock. */
   private speed = 0;
   private lastRotation = 0;
   private spinUp: Promise<void> = Promise.resolve();
-  private landing: gsap.core.Tween | null = null;
-  private plan: { to: number; travel: number; duration: number; ease: WheelEase } | null = null;
+  private spinUpElapsed = 0;
+  private settleSpinUp: (() => void) | null = null;
+  private plan: {
+    from: number;
+    to: number;
+    travel: number;
+    duration: number;
+    elapsed: number;
+    ease: WheelEase;
+  } | null = null;
   private target: { segment: number; offset: number } | null = null;
   private settleLanding: (() => void) | null = null;
   private hurried = false;
@@ -227,13 +236,36 @@ export class PrizeWheel extends Container {
 
   update(ticker: Ticker): void {
     const seconds = ticker.deltaMS / 1000;
-    if (this.speed > 0) this.rotor.rotation += this.speed * seconds;
+    if (this.plan) {
+      const plan = this.plan;
+      plan.elapsed = Math.min(plan.duration, plan.elapsed + seconds);
+      this.rotor.rotation = plan.from + plan.travel * plan.ease(plan.elapsed / plan.duration);
+      if (plan.elapsed === plan.duration) this.finishLanding();
+    } else if (this.settleSpinUp || this.speed > 0) {
+      const before = this.spinUpElapsed;
+      this.spinUpElapsed = Math.min(SPIN_UP_SECONDS, before + seconds);
+      // Integrate the linear acceleration exactly, even when a frame straddles full speed.
+      const rampTravel =
+        (SPIN_SPEED * (this.spinUpElapsed ** 2 - before ** 2)) / (2 * SPIN_UP_SECONDS);
+      const cruiseSeconds = seconds - (this.spinUpElapsed - before);
+      this.rotor.rotation += rampTravel + SPIN_SPEED * cruiseSeconds;
+      this.speed = (SPIN_SPEED * this.spinUpElapsed) / SPIN_UP_SECONDS;
+      if (this.spinUpElapsed === SPIN_UP_SECONDS) {
+        const settle = this.settleSpinUp;
+        this.settleSpinUp = null;
+        settle?.();
+      }
+    }
 
     const now = this.rotor.rotation;
-    const forward = pegsPassed(this.lastRotation, now, COUNT);
-    const backward = pegsPassed(now, this.lastRotation, COUNT);
-    if (forward > 0) this.flickPointer(-1);
-    else if (backward > 0) this.flickPointer(1);
+    this.pointer.rotation = pointerRotation(
+      this.lastRotation,
+      now,
+      COUNT,
+      this.pointer.rotation,
+      seconds,
+    );
+    if (pegsPassed(this.lastRotation, now, COUNT) > 0) this.onPeg?.();
     this.lastRotation = now;
 
     this.lightClock += seconds;
@@ -244,27 +276,22 @@ export class PrizeWheel extends Container {
     }
   }
 
-  /** Small wind-back, then accelerate to full speed and keep turning until `land()`. */
+  /** Accelerate forwards, then keep turning until the server result is known. */
   startSpin(): void {
+    this.finishLanding();
     this.clearWin();
     this.hurried = false;
     this.lightMode = 'spin';
-    gsap.killTweensOf(this.rotor);
+    this.speed = 0;
+    this.spinUpElapsed = 0;
     this.spinUp = new Promise((resolve) => {
-      gsap
-        .timeline({ onComplete: resolve, onInterrupt: resolve })
-        .to(this.rotor, {
-          rotation: this.rotor.rotation - 0.12,
-          duration: 0.18,
-          ease: 'power2.out',
-        })
-        .to(this, { speed: SPIN_SPEED, duration: 0.5, ease: 'power1.in' });
+      this.settleSpinUp = resolve;
     });
   }
 
   /** Decelerates onto `segment`, `offset` widths from its centre. Resolves when settled. */
   async land(segment: number, offset: number): Promise<void> {
-    if (!this.hurried) await this.spinUp;
+    await this.spinUp;
     this.target = { segment, offset };
     await new Promise<void>((resolve) => {
       this.settleLanding = resolve;
@@ -280,64 +307,42 @@ export class PrizeWheel extends Container {
   hurry(): void {
     if (this.hurried) return;
     this.hurried = true;
-    if (!this.landing) return; // not landing yet: land() will plan a short stop
+    if (!this.plan) return; // not landing yet: land() will plan a short stop
     // Already in the final crawl: nothing to gain.
     if (this.plan!.to - this.rotor.rotation < HURRIED_TRAVEL + segmentWidth(COUNT)) return;
     this.planLanding(HURRIED_TRAVEL, 2);
   }
 
   /**
-   * Starts (or restarts) the landing tween from the current rotation onto the target, at least
+   * Starts (or restarts) the landing from the current rotation onto the target, at least
    * `minTravel` away. The duration is chosen so the ease's starting speed equals the wheel's
    * measured speed: no visible jolt.
    */
   private planLanding(minTravel: number, power: number) {
     const { segment, offset } = this.target!;
-    // Mid-landing, carry on at exactly the current speed; from a free spin, use the spin speed
-    // (with a floor in case STOP came during the wind-up).
-    const speed = this.landing ? this.landingSpeed() : Math.max(this.speed, SPIN_SPEED * 0.4);
-    // Detach the old landing so killing it doesn't count as the landing ending.
-    this.landing?.eventCallback('onInterrupt', null);
-    gsap.killTweensOf([this, this.rotor]);
+    // Carry the current speed into either the normal landing or the shorter STOP plan.
+    const speed = this.plan ? this.landingSpeed() : this.speed;
     this.speed = 0;
-
     const from = this.rotor.rotation;
     const to = targetRotation(from, segment, offset, COUNT, minTravel);
     const travel = to - from;
-    const ease = createWheelEase({
-      overshoot: (OVERSHOOT_SEGMENTS * segmentWidth(COUNT)) / travel,
-      power,
-    });
-    const finish = () => {
-      this.landing = null;
-      this.lightMode = 'idle';
-      this.plan = null;
-      const settle = this.settleLanding;
-      this.settleLanding = null;
-      settle?.();
-    };
+    const ease = createWheelEase({ power });
     const duration = (travel * ease.initialSlope) / speed;
-    this.plan = { to, travel, duration, ease };
-    this.landing = gsap.to(this.rotor, {
-      rotation: to,
-      duration,
-      ease,
-      onComplete: finish,
-      // Also settle if killed from outside (startSpin, destroy), so callers never hang.
-      onInterrupt: finish,
-    });
+    this.plan = { from, to, travel, duration, elapsed: 0, ease };
   }
 
-  /**
-   * Current angular speed of the landing, read off the ease curve itself (travel × slope /
-   * duration). Exact, unlike a frame-to-frame estimate, which a slow frame can skew.
-   */
+  private finishLanding(): void {
+    this.plan = null;
+    this.speed = 0;
+    this.lightMode = 'idle';
+    const settle = this.settleLanding;
+    this.settleLanding = null;
+    settle?.();
+  }
+
   private landingSpeed(): number {
-    const { travel, duration, ease } = this.plan!;
-    const progress = this.landing!.progress();
-    const a = Math.max(0, progress - 1e-4);
-    const b = Math.min(1, progress + 1e-4);
-    return (travel * (ease(b) - ease(a))) / (b - a) / duration;
+    const { travel, duration, elapsed, ease } = this.plan!;
+    return (travel * ease.slope(elapsed / duration)) / duration;
   }
 
   /** Segment currently under the pointer. */
@@ -371,20 +376,14 @@ export class PrizeWheel extends Container {
   }
 
   override destroy(...args: Parameters<Container['destroy']>): void {
-    gsap.killTweensOf([this, this.rotor, this.highlight, this.pointer]);
+    this.finishLanding();
+    this.settleSpinUp?.();
+    this.settleSpinUp = null;
+    gsap.killTweensOf(this.highlight);
     super.destroy(...args);
     // Baked textures are owned here; display-object destroy doesn't free them.
     this.faceTexture.destroy(true);
     this.bulbTexture.destroy(true);
-  }
-
-  private flickPointer(direction: 1 | -1) {
-    this.onPeg?.();
-    gsap.fromTo(
-      this.pointer,
-      { rotation: 0.38 * direction },
-      { rotation: 0, duration: 0.3, ease: 'elastic.out(1.1, 0.35)', overwrite: true },
-    );
   }
 
   private renderLights() {
