@@ -14,6 +14,7 @@ import {
 import { gsap } from 'gsap';
 import { Container, Graphics, Rectangle, Text, type Texture, type Ticker } from 'pixi.js';
 import { Backdrop } from './backdrop';
+import { BadgeTip } from './badge-tip';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
 import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
@@ -57,8 +58,8 @@ const SELECTED_KEY = 'lab:floor-selected';
 /**
  * The Casino Floor: a synthwave arcade with one cabinet per game. Nothing to learn: hover
  * or arrow keys pick a cabinet, a click (or Enter) zooms into its screen and opens the game.
- * On phones the row becomes a swipeable carousel. The HUD shows the shared credits and badges,
- * and the HIRE ME sign lights up once every badge is earned.
+ * On phones the row becomes a swipeable carousel. The HUD shows the shared credits and badges
+ * (hover one for how to earn it), with a message once every badge is earned.
  */
 export class FloorScene extends Scene {
   private readonly options: FloorSceneOptions;
@@ -70,6 +71,8 @@ export class FloorScene extends Scene {
   private readonly hint = new Label('', 'caption');
   private readonly credits: Text;
   private readonly badges = new Container();
+  private readonly badgeTip = new BadgeTip();
+  private readonly badgesDone: Text;
   private readonly statsButton: NeonIconButton;
   private readonly mute: NeonIconButton;
   private readonly dots = new Graphics();
@@ -128,6 +131,11 @@ export class FloorScene extends Scene {
     renderCredits();
     wallet.onChange(renderCredits);
 
+    this.badgesDone = new Text({
+      text: '★ ALL BADGES COLLECTED · THANKS FOR PLAYING ★',
+      style: neonStyle(0x7cff6b, 12, { letterSpacing: 1 }),
+    });
+    this.badgesDone.anchor.set(0, 0.5);
     this.buildBadges(achievements);
     this.statsButton = new NeonIconButton(pulseGlyph, colors.cyan, (on) =>
       on ? 'Hide performance stats' : 'Show performance stats',
@@ -182,11 +190,13 @@ export class FloorScene extends Scene {
       this.title,
       this.credits,
       this.badges,
+      this.badgesDone,
       this.statsButton,
       this.mute,
       this.caption,
       this.hint,
       this.dots,
+      this.badgeTip,
       this.confetti,
       this.curtain,
       this.flash,
@@ -229,6 +239,7 @@ export class FloorScene extends Scene {
       this.title.position.set(width / 2, 56);
       this.credits.position.set(28, 36);
       this.badges.position.set(30, 76);
+      this.placeBadgeExtras();
       this.statsButton.position.set(width - 100, 44);
       this.mute.position.set(width - 44, 44);
       this.caption.position.set(width / 2, height - 46);
@@ -247,6 +258,7 @@ export class FloorScene extends Scene {
       this.title.position.set(width / 2, 72);
       this.credits.position.set(28, 168);
       this.badges.position.set(30, 206);
+      this.placeBadgeExtras();
       this.statsButton.position.set(width - 100, 186);
       this.mute.position.set(width - 44, 186);
       this.caption.position.set(width / 2, height - 150);
@@ -436,14 +448,34 @@ export class FloorScene extends Scene {
         icon.accessible = true;
         icon.accessibleTitle = `${badge.title}: ${earned ? 'earned' : badge.hint}`;
         icon.on('pointerover', () => {
-          this.caption.text = `BADGE · ${badge.title} — ${earned ? 'earned!' : badge.hint}`;
+          icon.scale.set(1.15);
+          this.badgeTip.show({
+            game: game.title,
+            title: badge.title,
+            hint: badge.hint,
+            earned,
+            color: game.color,
+            progress: [achievements.count, ACHIEVEMENTS.length],
+          });
         });
-        icon.on('pointerout', () => this.renderCaption());
+        icon.on('pointerout', () => {
+          icon.scale.set(1);
+          this.badgeTip.hide();
+        });
         this.badges.addChild(icon);
       });
+      this.badgeTip.hide();
+      this.badgesDone.visible = achievements.complete;
     };
     draw();
     achievements.onChange(draw);
+  }
+
+  /** The "all collected" line and the hover card sit just under the badge row. */
+  private placeBadgeExtras() {
+    const { x, y } = this.badges.position;
+    this.badgesDone.position.set(x, y + 30);
+    this.badgeTip.position.set(x - 2, y + 20);
   }
 
   private trackKonami(event: KeyboardEvent) {
@@ -488,6 +520,7 @@ export class FloorScene extends Scene {
     const hud = [
       this.credits,
       this.badges,
+      this.badgesDone,
       this.statsButton,
       this.mute,
       this.caption,
