@@ -205,6 +205,10 @@ Pick one of three chests (click, or press 1, 2 or 3). Big prizes set off the cel
 `?demo=big`, `?demo=mega` or `?demo=epic` forces that tier so the sequence can be seen without
 waiting for a rare draw, and the screen says so.
 
+- **Royal fortune cabinet.** Reuses the floor cabinet's crown illustration behind a chrome
+  marquee. Lucky (now crowned) and purple-and-gold chests with amethyst locks stand on a
+  metal-framed stage with a neon grid floor, and the BIG/MEGA/EPIC banner uses chrome-style
+  Orbitron. Controls sit in a metal deck beside the stage in landscape and below it in portrait.
 - **Server-decided pick.** The pick is cosmetic: the server decides the prize, and what the
   other two chests held, when the chest is picked. RTP is 97%, a pick pays on 63% of tries, and a
   BIG WIN or better comes up 1 in 50.

@@ -1,4 +1,5 @@
 import '@lab/core/game.css';
+import './style.css';
 import {
   colors,
   createGame,
@@ -7,7 +8,7 @@ import {
   SoundManager,
   Wallet,
 } from '@lab/core';
-import { Container, Graphics, Rectangle } from 'pixi.js';
+import { Assets, Container, Graphics, Rectangle, type Texture } from 'pixi.js';
 import { BonusScene } from './bonus-scene';
 import { BET_LEVELS, forcedResolver, resolveBonus } from './logic/prizes';
 import { TIERS } from './logic/tiers';
@@ -17,7 +18,20 @@ const game = await createGame({
   designWidth: 1280,
   designHeight: 720,
   portrait: { width: 720, height: 1280 },
+  background: '#08091a',
 });
+
+const [artwork] = await Promise.all([
+  Assets.load<Texture>(`${import.meta.env.BASE_URL}art/royal-fortune.webp`),
+  Promise.race([
+    Promise.all(
+      ['700 16px Orbitron', '900 16px Orbitron'].map((font) =>
+        document.fonts.load(font).catch(() => []),
+      ),
+    ),
+    new Promise((resolve) => setTimeout(resolve, 1500)),
+  ]),
+]);
 
 const sounds = new SoundManager();
 sounds.synth({
@@ -96,6 +110,7 @@ const resolver = demoTier ? forcedResolver(demoTier.at) : resolveBonus;
 
 await game.scenes.change(
   new BonusScene({
+    artwork,
     coinTexture,
     stats: __BONUS_STATS__,
     // Same storage key as the hub and other games, so the balance carries between them.
