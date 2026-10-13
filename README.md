@@ -230,8 +230,9 @@ The landing page is a game too: a synthwave arcade with one cabinet per game. No
 learn: hover (or use the arrow keys) to light a cabinet, and click (or press Enter) to zoom into
 its screen and open the game. On phones the row becomes a swipeable carousel with dots.
 
-- **Attract mode.** Each cabinet's screen loops a tiny preview of its game: spinning reels, a
-  coasting wheel, a foil wipe, a crash curve, a bouncing mascot.
+- **Attract mode.** Each cabinet's screen loops a tiny preview of its game, drawn to match the
+  game's own retrowave look: the slot's symbols on silver reels, the enamel prize wheel, a
+  holographic foil wipe, the crash curve over a striped sun, and crowned Lucky on the bonus stage.
 - **Cabinets drawn in code.** Gradient shells edged with a neon tube (glow, halo and a white-hot
   core), lit marquees with chasing bulbs, joysticks, buttons and coin doors, and a pool of light
   with tube reflections on the grid. The selected cabinet lifts, its bulbs chase faster and its
