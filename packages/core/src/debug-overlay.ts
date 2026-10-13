@@ -40,7 +40,7 @@ const countNodes = (node: Container): number =>
  * Small DOM panel with FPS, draw calls per frame and scene-graph size. It lives outside the canvas
  * so it doesn't add draw calls of its own.
  */
-export function attachDebugOverlay(app: Application): () => void {
+export function attachDebugOverlay(app: Application, info?: () => string): () => void {
   const panel = document.createElement('div');
   panel.setAttribute('aria-hidden', 'true');
   Object.assign(panel.style, {
@@ -80,6 +80,7 @@ export function attachDebugOverlay(app: Application): () => void {
       `${restoreGl ? lastFrameDraws : 'n/a'} draw calls`,
       `${countNodes(app.stage)} nodes`,
       `${renderer.name} ${Math.round(width)}×${Math.round(height)} @${renderer.resolution}x`,
+      ...(info ? [info()] : []),
     ].join('\n');
   };
   app.ticker.add(tick, undefined, UPDATE_PRIORITY.UTILITY);

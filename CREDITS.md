@@ -4,7 +4,12 @@
 
 There are no third-party art or sound assets. Every symbol, cabinet, skyline and character is
 drawn in code with PixiJS `Graphics`, and every sound is synthesized at startup by
-`renderWav()` in `@lab/core`. Text uses the system UI font.
+`renderWav()` in `@lab/core`. The games use the system UI font; the Casino Floor uses a web
+font, self-hosted from Fontsource:
+
+| Font                                                | Licence                   |
+| --------------------------------------------------- | ------------------------- |
+| [Orbitron](https://github.com/theleagueof/orbitron) | SIL Open Font License 1.1 |
 
 ## Libraries
 

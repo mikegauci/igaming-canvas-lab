@@ -2,7 +2,6 @@ import {
   ACHIEVEMENTS,
   colors,
   Confetti,
-  fontFamily,
   formatCredits,
   Label,
   MuteButton,
@@ -17,6 +16,7 @@ import { gsap } from 'gsap';
 import { BitmapText, Container, Graphics, Rectangle, type Texture, type Ticker } from 'pixi.js';
 import { Backdrop } from './backdrop';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
+import { displayFont } from './fonts';
 import { GAMES } from './games';
 
 export interface FloorSceneOptions {
@@ -59,9 +59,16 @@ export class FloorScene extends Scene {
   private readonly world = new Container();
   private readonly cabinets: Cabinet[];
   private readonly title = new Label('iGAMING CANVAS LAB', 'title', {
+    fontFamily: displayFont,
+    fontSize: 40,
+    fontWeight: '900',
     dropShadow: { color: colors.neon, blur: 14, distance: 0, alpha: 0.95 },
   });
-  private readonly subtitle = new Label('THE CASINO FLOOR', 'caption', { letterSpacing: 6 });
+  private readonly subtitle = new Label('THE CASINO FLOOR', 'caption', {
+    fontFamily: displayFont,
+    fontWeight: '500',
+    letterSpacing: 6,
+  });
   private readonly caption = new Label('', 'body', { fontSize: 20 });
   private readonly hint = new Label('', 'caption');
   private readonly credits: BitmapText;
@@ -112,7 +119,7 @@ export class FloorScene extends Scene {
     this.hint.anchor.set(0.5);
     this.credits = new BitmapText({
       text: '',
-      style: { fontFamily, fontSize: 22, fontWeight: 'bold', fill: colors.gold },
+      style: { fontFamily: displayFont, fontSize: 20, fontWeight: '700', fill: colors.gold },
     });
     this.credits.anchor.set(0, 0.5);
     const renderCredits = () => (this.credits.text = `CREDITS ${formatCredits(wallet.balance)}`);
@@ -122,7 +129,8 @@ export class FloorScene extends Scene {
     this.buildBadges(achievements);
     this.hireMeSign = new Graphics();
     this.hireMeText = new Label('HIRE ME', 'body', {
-      fontSize: 24,
+      fontFamily: displayFont,
+      fontSize: 22,
       fontWeight: '900',
       fill: colors.neon,
       letterSpacing: 4,
@@ -456,8 +464,13 @@ export class FloorScene extends Scene {
   private playIntro() {
     const { introLayer } = this;
     const bg = new Graphics().rect(0, 0, 4000, 4000).fill(colors.bg);
-    const insert = new Label('INSERT COIN', 'title', { fill: colors.gold, letterSpacing: 6 });
+    const insert = new Label('INSERT COIN', 'title', {
+      fontFamily: displayFont,
+      fill: colors.gold,
+      letterSpacing: 6,
+    });
     const start = new Label('PRESS START', 'title', {
+      fontFamily: displayFont,
       fill: colors.neon,
       letterSpacing: 6,
       dropShadow: { color: colors.neon, blur: 16, distance: 0, alpha: 1 },

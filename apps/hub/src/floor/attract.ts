@@ -1,5 +1,6 @@
-import { colors, fontFamily } from '@lab/core';
+import { colors } from '@lab/core';
 import { BitmapText, Container, Graphics } from 'pixi.js';
+import { displayFont } from './fonts';
 
 /** Size of a cabinet's screen, in cabinet space. */
 export const SCREEN_WIDTH = 160;
@@ -126,7 +127,7 @@ class CrashAttract extends Container implements Attract {
     super();
     this.readout = new BitmapText({
       text: '',
-      style: { fontFamily, fontSize: 22, fontWeight: 'bold', fill: 0xffffff },
+      style: { fontFamily: displayFont, fontSize: 20, fontWeight: '700', fill: 0xffffff },
     });
     this.readout.anchor.set(0.5, 0);
     this.readout.position.set(SCREEN_WIDTH / 2, 8);

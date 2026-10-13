@@ -1,7 +1,8 @@
-import { colors, fontFamily } from '@lab/core';
+import { colors } from '@lab/core';
 import { gsap } from 'gsap';
 import { Container, Graphics, Text } from 'pixi.js';
 import { createAttract, SCREEN_HEIGHT, SCREEN_WIDTH, type Attract } from './attract';
+import { displayFont } from './fonts';
 import type { GameInfo } from './games';
 
 export const CABINET_WIDTH = 200;
@@ -84,7 +85,13 @@ export class Cabinet extends Container {
       .stroke({ color, width: 3 });
     this.title = new Text({
       text: game.title,
-      style: { fontFamily, fontSize: 20, fontWeight: '900', fill: color, letterSpacing: 2 },
+      style: {
+        fontFamily: displayFont,
+        fontSize: 17,
+        fontWeight: '900',
+        fill: color,
+        letterSpacing: 2,
+      },
     });
     this.title.anchor.set(0.5);
     this.title.position.set(0, -CABINET_HEIGHT + 20);
@@ -99,7 +106,13 @@ export class Cabinet extends Container {
 
     this.play = new Text({
       text: 'PLAY ▶',
-      style: { fontFamily, fontSize: 15, fontWeight: '900', fill: colors.text, letterSpacing: 2 },
+      style: {
+        fontFamily: displayFont,
+        fontSize: 13,
+        fontWeight: '700',
+        fill: colors.text,
+        letterSpacing: 2,
+      },
     });
     this.play.anchor.set(0.5);
     this.play.position.set(0, -118);

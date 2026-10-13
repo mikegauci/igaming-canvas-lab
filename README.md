@@ -104,11 +104,12 @@ CI (GitHub Actions) runs typecheck, lint, tests and the full build on every push
 
 ### URL flags
 
-| Flag                    | Where    | Does                                               |
-| ----------------------- | -------- | -------------------------------------------------- |
-| `?debug=1`              | any page | FPS, draw calls and node count overlay             |
-| `?seed=123`             | any game | replays the same sequence of rounds                |
-| `?demo=big\|mega\|epic` | bonus    | every pick lands that win tier (says so on screen) |
+| Flag                         | Where    | Does                                                       |
+| ---------------------------- | -------- | ---------------------------------------------------------- |
+| `?debug=1`                   | any page | FPS, draw calls and node count overlay                     |
+| `?quality=high\|medium\|low` | hub      | pins the floor's quality tier instead of auto-detecting it |
+| `?seed=123`                  | any game | replays the same sequence of rounds                        |
+| `?demo=big\|mega\|epic`      | bonus    | every pick lands that win tier (says so on screen)         |
 
 ## Mini Slot (`apps/slot`)
 
