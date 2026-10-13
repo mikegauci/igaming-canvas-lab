@@ -17,15 +17,18 @@ import { Container, Graphics, Rectangle, Text, type Texture, type Ticker } from 
 import { Backdrop } from './backdrop';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
 import { CrtFilter } from './crt-filter';
+import { Motes } from './motes';
 import { GAMES } from './games';
 import { NeonTitle, neonStyle, strike, tubeCore, unlitStyle } from './neon';
-import type { Quality } from './quality';
+import type { Quality, QualitySettings } from './quality';
 
 export interface FloorSceneOptions {
   wallet: Wallet;
   achievements: Achievements;
   sounds: SoundManager;
   coinTexture: Texture;
+  /** Soft glow dot for the drifting motes. */
+  moteTexture: Texture;
   /** Turns the cabinets' CRT pass on or off with the quality tier. */
   quality: Quality;
   /** Shows the short boot animation (first visit of the session); it runs on startIntro(). */
@@ -74,6 +77,7 @@ export class FloorScene extends Scene {
   private readonly dots = new Graphics();
   private readonly confetti: Confetti;
   private readonly crt = new CrtFilter();
+  private readonly motes: Motes;
   private readonly curtain = new Graphics();
   /** The switch-off flash when a game launches: the picture collapses to a line, then a dot. */
   private readonly flash = new Graphics();
@@ -110,11 +114,13 @@ export class FloorScene extends Scene {
       return cabinet;
     });
     this.world.addChild(...this.cabinets);
-    const applyQuality = (crt: boolean) => {
+    this.motes = new Motes(options.moteTexture);
+    const applyQuality = ({ crt, particles }: QualitySettings) => {
       for (const cabinet of this.cabinets) cabinet.crt = crt ? this.crt : null;
+      this.motes.setDensity(particles);
     };
-    applyQuality(options.quality.settings.crt);
-    options.quality.onChange(({ crt }) => applyQuality(crt));
+    applyQuality(options.quality.settings);
+    options.quality.onChange(applyQuality);
 
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
@@ -160,11 +166,20 @@ export class FloorScene extends Scene {
     this.curtain.alpha = 0;
     // Decorative layers must not take part in hit-testing: inside an interactive parent even a
     // transparent full-screen Graphics (the fade curtain) would swallow every click.
-    for (const layer of [this.backdrop, this.curtain, this.flash, this.confetti, this.dots]) {
+    const decorative = [
+      this.backdrop,
+      this.motes,
+      this.curtain,
+      this.flash,
+      this.confetti,
+      this.dots,
+    ];
+    for (const layer of decorative) {
       layer.eventMode = 'none';
     }
     this.addChild(
       this.backdrop,
+      this.motes,
       this.world,
       this.title,
       this.credits,
@@ -201,6 +216,7 @@ export class FloorScene extends Scene {
       .fill(0xf4f1ff);
     this.flash.position.set(width / 2, height / 2);
     this.flash.alpha = 0;
+    this.motes.layout(width, height);
 
     if (orientation === 'landscape') {
       const ground = 620;
@@ -278,6 +294,7 @@ export class FloorScene extends Scene {
     for (const cabinet of this.cabinets) cabinet.update(seconds);
     this.crt.time = this.time;
     this.backdrop.update(seconds);
+    this.motes.tick(seconds);
     this.title.update(seconds);
     this.confetti.tick(seconds);
 

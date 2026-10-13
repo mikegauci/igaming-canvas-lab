@@ -2,6 +2,7 @@ import { Achievements, colors, createGame, SoundManager, Wallet } from '@lab/cor
 import { Container, Graphics, Rectangle } from 'pixi.js';
 import { FloorScene } from './floor-scene';
 import { loadFonts } from './fonts';
+import { PostEffects } from './post';
 import { Quality } from './quality';
 
 const INTRO_KEY = 'lab:intro-seen';
@@ -21,6 +22,8 @@ export async function startFloor(
   onBooted?: () => void,
 ): Promise<FloorHandle> {
   const quality = Quality.fromEnvironment();
+  // Post-processing needs the app, so the debug panel asks for its state through this.
+  let describePost = () => 'post pending';
   const [game] = await Promise.all([
     createGame({
       parent,
@@ -28,7 +31,7 @@ export async function startFloor(
       designHeight: 720,
       portrait: { width: 720, height: 1280 },
       maxResolution: quality.settings.maxResolution,
-      debugInfo: () => `quality ${quality.tier}`,
+      debugInfo: () => `quality ${quality.tier} · ${describePost()}`,
     }),
     loadFonts(),
   ]);
@@ -37,9 +40,14 @@ export async function startFloor(
   game.app.ticker.add((ticker) => {
     if (!document.hidden) quality.sample(ticker.elapsedMS);
   });
-  quality.onChange(({ maxResolution }) => {
+  const post = new PostEffects(game.app);
+  describePost = () => post.describe();
+  post.apply(quality.settings);
+  quality.onChange((settings) => {
     const { renderer, screen } = game.app;
-    renderer.resize(screen.width, screen.height, Math.min(window.devicePixelRatio, maxResolution));
+    const resolution = Math.min(window.devicePixelRatio, settings.maxResolution);
+    renderer.resize(screen.width, screen.height, resolution);
+    post.apply(settings);
   });
 
   const sounds = new SoundManager();
@@ -84,6 +92,17 @@ export async function startFloor(
   });
   coinArt.destroy({ children: true });
 
+  // A soft round glow for the drifting motes: rings that fade toward the edge.
+  const moteArt = new Graphics();
+  for (let r = 8; r >= 1; r--) moteArt.circle(0, 0, r).fill({ color: 0xffffff, alpha: 0.12 });
+  moteArt.circle(0, 0, 1.6).fill(0xffffff);
+  const moteTexture = game.app.renderer.generateTexture({
+    target: moteArt,
+    frame: new Rectangle(-8, -8, 16, 16),
+    resolution: game.app.renderer.resolution,
+  });
+  moteArt.destroy();
+
   const intro = sessionStorage.getItem(INTRO_KEY) === null;
   sessionStorage.setItem(INTRO_KEY, '1');
 
@@ -92,6 +111,7 @@ export async function startFloor(
     achievements: new Achievements(),
     sounds,
     coinTexture,
+    moteTexture,
     intro,
     quality,
     navigate: (path) => window.location.assign(path),

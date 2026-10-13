@@ -83,14 +83,16 @@ because cash-outs are judged on the server's clock while the round is running.
   strokes it paints into the `RenderTexture`.
 - **Work moved out of the frame.** RTP and odds are computed at build time (Vite `define`). The
   ticker pauses on hidden tabs, and resolution is capped at 2×.
-- **Light first load.** Each game loads 154–160 KB of gzipped JS. The landing page loads
-  Pixi on demand: about 210 KB of gzipped JS for the arcade.
+- **Light first load.** Each game loads 154–160 KB of gzipped JS. The landing page paints a CSS
+  boot screen from 1.7 KB of JS, then loads Pixi and the floor on demand: about 225 KB gzipped,
+  plus about 40 KB of web fonts.
 - **Measured.** `?debug=1` on any page shows FPS, WebGL draw calls per frame (about 9–21 in
-  the games, about 40 on the arcade floor) and node count.
+  the games, about 80 on the arcade floor with bloom on), node count, and the floor's quality
+  tier and post-processing state.
 
 ### Testing
 
-`pnpm test` runs 94 tests over the pure logic, in milliseconds and without a browser:
+`pnpm test` runs 105 tests over the pure logic, in milliseconds and without a browser:
 
 - exact RTP by enumerating every reel stop, cross-checked against seeded simulations
 - prizes, segments and stops drawn as often as their weights say
@@ -253,6 +255,23 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
   entry script, and a failed load turns it into a retry button.
 - **Crawler-friendly.** A plain HTML list of the games is always in the page, visually hidden,
   for search engines, link previews and screen readers.
+- **Bloom and grade.** The whole stage goes through pixi-filters' `AdvancedBloomFilter`, tuned so
+  only the hottest pixels (tube cores, bulbs, the sun) bloom, then a one-pass vignette and film
+  grain. `stage.filterArea = app.screen` keeps the passes screen-sized, even though the backdrop
+  bleeds far past the screen. Motes drifting up through the scene are one additive
+  `ParticleContainer`.
+- **Quality tiers** (`floor/quality.ts`, unit-tested). The floor starts from a hardware guess
+  (memory, cores, touch) and then judges 2-second windows of raw frame time. It steps down one
+  tier when frames are slow and uneven, or below ~25 fps however steady they are. A steady
+  30 fps cap, such as Low Power Mode, is treated as a choice, not as slowness. It never steps
+  back up, so it can't oscillate. `?quality=high|medium|low` pins a tier.
+
+  | Tier   | Resolution cap | CRT screens | Bloom + grade   | Motes |
+  | ------ | -------------- | ----------- | --------------- | ----- |
+  | high   | 2×             | on          | full resolution | 100%  |
+  | medium | 1.5×           | on          | half resolution | 60%   |
+  | low    | 1×             | off         | off             | 25%   |
+
 - **Easter egg.** The Konami code makes it rain coins.
 
 ## Development

@@ -1,38 +1,11 @@
 import { Filter, GlProgram } from 'pixi.js';
+import { frameVertex } from './frame-vertex';
 
 /**
  * A small CRT tube for the cabinet screens: barrel curvature, scanlines, a slow rolling bright
  * band, a little chromatic aberration at the edges and a vignette. The maths runs in 0–1 coords
  * across the filtered area (vUv), then maps back to the input texture, which Pixi may have padded.
- *
- * The vertex shader is Pixi's default filter vertex plus two varyings. Working out the mapping
- * there means the fragment shader declares none of Pixi's frame uniforms: shared uniforms must
- * have the same precision in both stages, and Pixi gives the stages different defaults.
  */
-const vertex = /* glsl */ `
-in vec2 aPosition;
-out vec2 vTextureCoord;
-out vec2 vUv;
-out vec3 vFrame;
-
-uniform vec4 uInputSize;
-uniform vec4 uOutputFrame;
-uniform vec4 uOutputTexture;
-
-void main() {
-  vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
-  position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
-  position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
-  gl_Position = vec4(position, 0.0, 1.0);
-
-  vec2 toTexture = uOutputFrame.zw * uInputSize.zw;
-  vTextureCoord = aPosition * toTexture;
-  vUv = aPosition;
-  // Texture-space size of the frame, and its height in pixels (for the scanlines).
-  vFrame = vec3(toTexture, uOutputFrame.w);
-}
-`;
-
 const fragment = /* glsl */ `
 in vec2 vTextureCoord;
 in vec2 vUv;
@@ -70,7 +43,7 @@ void main() {
 export class CrtFilter extends Filter {
   constructor() {
     super({
-      glProgram: GlProgram.from({ vertex, fragment, name: 'crt-filter' }),
+      glProgram: GlProgram.from({ vertex: frameVertex, fragment, name: 'crt-filter' }),
       resources: { crt: { uTime: { value: 0, type: 'f32' } } },
     });
   }
