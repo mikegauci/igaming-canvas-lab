@@ -210,15 +210,21 @@ waiting for a rare draw, and the screen says so.
 
 ## The Casino Floor (`apps/hub`)
 
-The landing page is a game too: a neon promenade with one arcade cabinet per game. Nothing to
+The landing page is a game too: a synthwave arcade with one cabinet per game. Nothing to
 learn: hover (or use the arrow keys) to light a cabinet, and click (or press Enter) to zoom into
 its screen and open the game. On phones the row becomes a swipeable carousel with dots.
 
 - **Attract mode.** Each cabinet's screen loops a tiny preview of its game: spinning reels, a
   coasting wheel, a foil wipe, a crash curve, a bouncing mascot.
-- **Parallax night scene.** Sky, two Valletta-style skylines (domes, bell towers, lit windows),
-  the harbour, the promenade and strings of bulbs move at different depths as the camera pans.
-  The art extends past the design area, so any screen shape is filled.
+- **Synthwave horizon in GLSL.** The sky and the floor are one shader quad each
+  (`floor/synthwave-shaders.ts`). The sky draws a dusk gradient, twinkling hashed stars and a
+  striped sun whose bands slide into the horizon. The floor draws an endless neon grid that
+  scrolls toward the viewer, with depth from `z = K / (y - horizon)` instead of 3D geometry.
+  Grid lines are anti-aliased analytically in pixels (no derivatives extension), and they fade
+  out before they get dense enough to cause moiré. Panning the camera shifts world x by a
+  constant, so near lines move more than far ones: parallax for free. Two wireframe mountain
+  ranges sit between them as parallax layers. The art extends past the design area, so any
+  screen shape is filled.
 - **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
   `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
   floor, and earning all five lights the HIRE ME sign, which opens the contact panel at any time.

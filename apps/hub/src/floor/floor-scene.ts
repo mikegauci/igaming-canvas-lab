@@ -48,7 +48,7 @@ const SWIPE_THRESHOLD = 50;
 const SELECTED_KEY = 'lab:floor-selected';
 
 /**
- * The Casino Floor: a neon promenade with one arcade cabinet per game. Nothing to learn: hover
+ * The Casino Floor: a synthwave arcade with one cabinet per game. Nothing to learn: hover
  * or arrow keys pick a cabinet, a click (or Enter) zooms into its screen and opens the game.
  * On phones the row becomes a swipeable carousel. The HUD shows the shared credits and badges,
  * and the HIRE ME sign lights up once every badge is earned.
@@ -203,13 +203,13 @@ export class FloorScene extends Scene {
     this.curtain.clear().rect(0, 0, width, height).fill(colors.bg);
 
     if (orientation === 'landscape') {
-      const street = 470;
-      this.backdrop.build(width, height, 380, street, 120);
+      const ground = 620;
+      this.backdrop.build(width, height, 380, ground, 120);
       const spacing = 236;
       const left = width / 2 - spacing * 2;
       this.cabinets.forEach((cabinet, i) => {
         cabinet.scale.set(1);
-        cabinet.position.set(left + i * spacing, street + 150);
+        cabinet.position.set(left + i * spacing, ground);
       });
       this.title.position.set(width / 2, 52);
       this.subtitle.position.set(width / 2, 92);
@@ -222,12 +222,12 @@ export class FloorScene extends Scene {
       this.hint.text = 'HOVER TO PREVIEW · CLICK TO PLAY · ← → TO BROWSE';
       this.dots.clear();
     } else {
-      const street = 720;
+      const ground = 870 + CABINET_HEIGHT * 0.5;
       const spacing = 380;
-      this.backdrop.build(width, height, 600, street, spacing * (GAMES.length - 1));
+      this.backdrop.build(width, height, 600, ground, spacing * (GAMES.length - 1));
       this.cabinets.forEach((cabinet, i) => {
         cabinet.scale.set(1.5);
-        cabinet.position.set(width / 2 + i * spacing, street + 150 + CABINET_HEIGHT * 0.5);
+        cabinet.position.set(width / 2 + i * spacing, ground);
       });
       this.title.position.set(width / 2, 70);
       this.subtitle.position.set(width / 2, 112);
