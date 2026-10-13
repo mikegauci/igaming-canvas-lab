@@ -225,12 +225,19 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
   constant, so near lines move more than far ones: parallax for free. Two wireframe mountain
   ranges sit between them as parallax layers. The art extends past the design area, so any
   screen shape is filled.
+- **Chrome and neon type.** The title is 80s chrome: a `FillGradient` with a hard horizon line,
+  plus a glint that sweeps across it through a moving stencil mask. "Casino Floor" is a neon
+  script. The neon look (hot core, coloured tube, glow) is baked into the text texture with
+  `dropShadow`, so it costs no filter passes.
+- **Power-on intro.** On the first visit of a session, the horizon fades up, the title drops
+  in, the script strikes like a real tube (a scripted stutter with a synthesized mains buzz),
+  and the cabinets light up one by one before the HUD comes on. Any key or tap skips to the end.
 - **Badges and HIRE ME.** Each game awards one badge (shared through `@lab/core`'s
   `Achievements` in localStorage, with an in-game toast). The credits and badges show on the
-  floor, and earning all five lights the HIRE ME sign, which opens the contact panel at any time.
+  floor, and earning all five lights the HIRE ME neon sign, which opens the contact panel at any time.
 - **Boot screen.** While Pixi downloads, a synthwave horizon in plain HTML and CSS (striped sun,
   scrolling perspective grid, chrome title, scanlines) shows real loading milestones, then
-  switches off like a CRT into the INSERT COIN intro. It costs no JavaScript beyond the hub's
+  switches off like a CRT into the floor's power-on intro. It costs no JavaScript beyond the hub's
   entry script, and a failed load turns it into a retry button.
 - **Crawler-friendly.** A plain HTML list of the games is always in the page, visually hidden,
   for search engines, link previews and screen readers.

@@ -53,6 +53,13 @@ export async function startFloor(
       { freq: 1319, duration: 0.25, delay: 0.07, wave: 'square', volume: 0.12 },
     ],
     zoom: [{ freq: 200, to: 1200, duration: 0.5, wave: 'triangle', volume: 0.18 }],
+    // Neon tube striking: a mains hum with a crackle.
+    buzz: [
+      { freq: 100, duration: 0.45, wave: 'saw', volume: 0.05 },
+      { freq: 0, duration: 0.08, delay: 0.05, wave: 'noise', volume: 0.04 },
+      { freq: 0, duration: 0.05, delay: 0.25, wave: 'noise', volume: 0.03 },
+    ],
+    blip: [{ freq: 660, to: 990, duration: 0.05, wave: 'square', volume: 0.04 }],
   });
 
   const coinArt = new Container({
