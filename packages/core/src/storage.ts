@@ -24,6 +24,26 @@ export function localStore(): KeyValueStore {
   };
 }
 
+/** Per-tab persistence for music position across lobby/game navigation. */
+export function sessionStore(): KeyValueStore {
+  return {
+    get(key) {
+      try {
+        return window.sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        window.sessionStorage.setItem(key, value);
+      } catch {
+        // Music still plays when browser storage is blocked.
+      }
+    },
+  };
+}
+
 export function memoryStore(initial: Record<string, string> = {}): KeyValueStore {
   const data = new Map(Object.entries(initial));
   return {
