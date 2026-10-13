@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryStore } from './storage';
 
 const mocks = vi.hoisted(() => ({
-  context: Object.assign(new EventTarget(), { state: 'suspended', resume: vi.fn() }),
+  context: Object.assign(new EventTarget(), {
+    state: 'suspended',
+    resume: vi.fn(),
+    suspend: vi.fn(),
+  }),
   start: vi.fn(),
   pause: vi.fn(),
   setMuted: vi.fn(),
@@ -32,6 +36,8 @@ vi.mock('./background-music', () => ({
 
 import { SoundManager } from './sound';
 
+const flush = () => new Promise((resolve) => setTimeout(resolve));
+
 describe('shared lobby/game audio lifecycle', () => {
   let page: EventTarget;
   let documentEvents: EventTarget & { hidden: boolean };
@@ -44,6 +50,9 @@ describe('shared lobby/game audio lifecycle', () => {
     vi.stubGlobal('window', page);
     vi.stubGlobal('document', documentEvents);
     mocks.context.state = 'suspended';
+    mocks.context.suspend.mockImplementation(async () => {
+      mocks.context.state = 'suspended';
+    });
     mocks.context.resume.mockImplementation(async () => {
       if (mocks.context.state !== 'running') throw new Error('Gesture required');
     });
@@ -76,6 +85,26 @@ describe('shared lobby/game audio lifecycle', () => {
     // @pixi/sound then resumes the context on touchend.
     mocks.context.state = 'running';
     mocks.context.dispatchEvent(new Event('statechange'));
+    expect(mocks.start).toHaveBeenCalledOnce();
+  });
+
+  it('suspends audio when switching apps and resumes it on return', async () => {
+    mocks.context.state = 'running';
+    mocks.context.resume.mockClear();
+    documentEvents.hidden = true;
+    documentEvents.dispatchEvent(new Event('visibilitychange'));
+    expect(mocks.pause).toHaveBeenCalledOnce();
+    expect(mocks.context.suspend).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    expect(mocks.context.state).toBe('suspended');
+    // The browser still remembers the earlier tap, so resuming without a new gesture is allowed.
+    mocks.context.resume.mockImplementationOnce(async () => {
+      mocks.context.state = 'running';
+    });
+    documentEvents.hidden = false;
+    documentEvents.dispatchEvent(new Event('visibilitychange'));
+    expect(mocks.context.resume).toHaveBeenCalledOnce();
+    await flush();
     expect(mocks.start).toHaveBeenCalledOnce();
   });
 
@@ -134,7 +163,11 @@ describe('shared lobby/game audio lifecycle', () => {
     expect(manager.musicMuted).toBe(true);
   });
 
-  it('pauses hidden pages and resumes on return or restoration from page cache', () => {
+  it('pauses hidden pages and resumes on return or restoration from page cache', async () => {
+    // Already unlocked: the browser lets the page resume without a new gesture.
+    mocks.context.resume.mockImplementation(async () => {
+      mocks.context.state = 'running';
+    });
     mocks.context.state = 'running';
     documentEvents.hidden = true;
     documentEvents.dispatchEvent(new Event('visibilitychange'));
@@ -143,11 +176,14 @@ describe('shared lobby/game audio lifecycle', () => {
     expect(mocks.start).not.toHaveBeenCalled();
     documentEvents.hidden = false;
     documentEvents.dispatchEvent(new Event('visibilitychange'));
+    await flush();
     expect(mocks.start).toHaveBeenCalledOnce();
     page.dispatchEvent(new Event('pagehide'));
     page.dispatchEvent(new Event('pointerdown'));
+    await flush();
     expect(mocks.start).toHaveBeenCalledOnce();
     page.dispatchEvent(new Event('pageshow'));
+    await flush();
     expect(mocks.start).toHaveBeenCalledTimes(2);
   });
 
