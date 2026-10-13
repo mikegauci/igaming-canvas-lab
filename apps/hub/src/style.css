@@ -24,122 +24,26 @@ body {
   color: var(--fg);
 }
 
-/* Arcade view: the Pixi floor fills the window. */
+/* The Pixi floor fills the window. */
+body {
+  overflow: hidden;
+}
+
 #stage {
   position: fixed;
   inset: 0;
   z-index: 0;
-  display: none;
   touch-action: none;
 }
 
-body.arcade {
-  overflow: hidden;
-}
-
-body.arcade #stage {
-  display: block;
-}
-
-/* The classic list stays in the page in arcade view, for crawlers and screen readers. */
-body.arcade main {
+/* The plain list of games stays in the page, visually hidden, for crawlers and screen readers. */
+main {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-main {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 12vh 16px 96px;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2rem, 6vw, 3rem);
-  text-shadow: 0 0 18px var(--neon);
-}
-
-.lede {
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.games {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.games a {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: var(--card);
-  color: inherit;
-  text-decoration: none;
-}
-
-.games a:hover,
-.games a:focus-visible {
-  background: rgba(255, 62, 165, 0.18);
-}
-
-.games span {
-  display: grid;
-  gap: 2px;
-}
-
-.games small {
-  color: var(--muted);
-}
-
-.games em {
-  color: var(--neon);
-  font-style: normal;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.links a,
-.link {
-  color: var(--neon);
-}
-
-.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.view-toggle {
-  position: fixed;
-  left: 16px;
-  bottom: 16px;
-  z-index: 2;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  background: rgba(22, 22, 41, 0.9);
-  color: var(--fg);
-  font: 600 14px/1 inherit;
-  cursor: pointer;
-}
-
-.view-toggle:hover,
-.view-toggle:focus-visible {
-  background: var(--neon);
-  color: var(--bg);
 }
 
 dialog {

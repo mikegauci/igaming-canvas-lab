@@ -9,7 +9,7 @@ export interface FloorHandle {
   resume(): void;
 }
 
-/** Boots Pixi and the Casino Floor into `parent`. Loaded on demand, so the classic view stays light. */
+/** Boots Pixi and the Casino Floor into `parent`. Loaded on demand. */
 export async function startFloor(
   parent: HTMLElement,
   openContact: () => void,
