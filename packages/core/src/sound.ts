@@ -19,23 +19,25 @@ export class SoundManager {
     this._muted = store.get(storageKey) === '1';
     if (this._muted) sound.muteAll();
 
-    // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
-    // events; keyboard players (Space = spin) need this too. Keep listening until the context
-    // is actually running: some keys (e.g. Escape) don't count as a gesture.
-    const stopListening = () => {
-      window.removeEventListener('keydown', unlock);
-      window.removeEventListener('pointerdown', unlock);
-    };
+    // iOS plays Web Audio on the "ambient" channel, which the silent switch mutes, so phones on
+    // silent hear nothing. Games want the media channel, like a video would use (Safari 17+).
+    const session = (navigator as { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = 'playback';
+
+    // Browsers start audio suspended until a user gesture. On touch screens only the end of a
+    // tap counts (pointerdown doesn't), and keyboard players (Space = spin) need unlocking too.
+    // iOS also suspends ("interrupted") the context on a call or when the tab is backgrounded,
+    // so keep listening for the whole session and resume whenever it isn't running.
     const unlock = () => {
       const context = sound.context.audioContext;
-      if (!context || context.state === 'running') return stopListening();
-      context.resume().then(
-        () => context.state === 'running' && stopListening(),
-        () => undefined,
-      );
+      if (context && context.state !== 'running') context.resume().catch(() => undefined);
     };
-    window.addEventListener('keydown', unlock);
-    window.addEventListener('pointerdown', unlock);
+    for (const type of ['pointerup', 'touchend', 'keydown']) {
+      window.addEventListener(type, unlock, { capture: true, passive: true });
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') unlock();
+    });
   }
 
   get muted(): boolean {
