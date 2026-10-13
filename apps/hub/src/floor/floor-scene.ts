@@ -16,14 +16,18 @@ import { gsap } from 'gsap';
 import { Container, Graphics, Rectangle, Text, type Texture, type Ticker } from 'pixi.js';
 import { Backdrop } from './backdrop';
 import { Cabinet, CABINET_HEIGHT } from './cabinet';
+import { CrtFilter } from './crt-filter';
 import { GAMES } from './games';
 import { NeonTitle, neonStyle, strike, tubeCore, unlitStyle } from './neon';
+import type { Quality } from './quality';
 
 export interface FloorSceneOptions {
   wallet: Wallet;
   achievements: Achievements;
   sounds: SoundManager;
   coinTexture: Texture;
+  /** Turns the cabinets' CRT pass on or off with the quality tier. */
+  quality: Quality;
   /** Shows the short boot animation (first visit of the session); it runs on startIntro(). */
   intro: boolean;
   /** Called with the game's path once the zoom-in has covered the screen. */
@@ -69,7 +73,10 @@ export class FloorScene extends Scene {
   private readonly mute: MuteButton;
   private readonly dots = new Graphics();
   private readonly confetti: Confetti;
+  private readonly crt = new CrtFilter();
   private readonly curtain = new Graphics();
+  /** The switch-off flash when a game launches: the picture collapses to a line, then a dot. */
+  private readonly flash = new Graphics();
   private readonly introLayer = new Container();
   private viewport: Viewport = { width: 1280, height: 720, orientation: 'landscape' };
   private selected = 0;
@@ -103,6 +110,11 @@ export class FloorScene extends Scene {
       return cabinet;
     });
     this.world.addChild(...this.cabinets);
+    const applyQuality = (crt: boolean) => {
+      for (const cabinet of this.cabinets) cabinet.crt = crt ? this.crt : null;
+    };
+    applyQuality(options.quality.settings.crt);
+    options.quality.onChange(({ crt }) => applyQuality(crt));
 
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
@@ -148,7 +160,7 @@ export class FloorScene extends Scene {
     this.curtain.alpha = 0;
     // Decorative layers must not take part in hit-testing: inside an interactive parent even a
     // transparent full-screen Graphics (the fade curtain) would swallow every click.
-    for (const layer of [this.backdrop, this.curtain, this.confetti, this.dots]) {
+    for (const layer of [this.backdrop, this.curtain, this.flash, this.confetti, this.dots]) {
       layer.eventMode = 'none';
     }
     this.addChild(
@@ -164,6 +176,7 @@ export class FloorScene extends Scene {
       this.dots,
       this.confetti,
       this.curtain,
+      this.flash,
       this.introLayer,
     );
 
@@ -178,7 +191,16 @@ export class FloorScene extends Scene {
     this.viewport = viewport;
     const { width, height, orientation } = viewport;
     this.hitArea = new Rectangle(0, 0, width, height);
-    this.curtain.clear().rect(0, 0, width, height).fill(colors.bg);
+    this.curtain
+      .clear()
+      .rect(-1000, -1000, width + 2000, height + 2000)
+      .fill(0x000000);
+    this.flash
+      .clear()
+      .rect(-width / 2, -height / 2, width, height)
+      .fill(0xf4f1ff);
+    this.flash.position.set(width / 2, height / 2);
+    this.flash.alpha = 0;
 
     if (orientation === 'landscape') {
       const ground = 620;
@@ -244,14 +266,17 @@ export class FloorScene extends Scene {
   override destroy(...args: Parameters<Scene['destroy']>): void {
     this.exit();
     this.introTimeline?.kill();
-    gsap.killTweensOf([this, this.curtain, this.introLayer, this.world, this.world.scale]);
+    gsap.killTweensOf([this, this.curtain, this.flash, this.flash.scale, this.introLayer]);
+    gsap.killTweensOf([this.world, this.world.scale]);
     super.destroy(...args);
+    this.crt.destroy();
   }
 
   override update(ticker: Ticker): void {
     const seconds = ticker.deltaMS / 1000;
     this.time += seconds;
-    for (const cabinet of this.cabinets) cabinet.update(seconds, this.time);
+    for (const cabinet of this.cabinets) cabinet.update(seconds);
+    this.crt.time = this.time;
     this.backdrop.update(seconds);
     this.title.update(seconds);
     this.confetti.tick(seconds);
@@ -302,7 +327,7 @@ export class FloorScene extends Scene {
     this.launch(index);
   }
 
-  /** Zooms into the cabinet's screen, fades out and opens the game. */
+  /** Zooms into the cabinet's screen, switches it off like a CRT and opens the game. */
   private launch(index: number) {
     this.launching = true;
     const cabinet = this.cabinets[index]!;
@@ -326,7 +351,13 @@ export class FloorScene extends Scene {
         },
         0,
       )
-      .to(this.curtain, { alpha: 1, duration: 0.25 }, 0.35);
+      // Then the tube switches off: a white frame collapses to a line, then to a dot.
+      .call(() => this.options.sounds.play('off'), undefined, 0.5)
+      .set(this.curtain, { alpha: 1 }, 0.55)
+      .set(this.flash, { alpha: 1 }, 0.55)
+      .to(this.flash.scale, { y: 0.006, duration: 0.12, ease: 'power2.in' }, 0.55)
+      .to(this.flash.scale, { x: 0, duration: 0.16, ease: 'power3.in' }, 0.67)
+      .to(this.flash, { alpha: 0, duration: 0.06 }, 0.8);
   }
 
   private targetFor(index: number): number {

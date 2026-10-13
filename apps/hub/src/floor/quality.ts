@@ -4,12 +4,14 @@ export interface QualitySettings {
   tier: QualityTier;
   /** Cap on devicePixelRatio: fill rate is the first thing to go on phones. */
   maxResolution: number;
+  /** CRT pass (curvature, scanlines) on the cabinet screens: five small filter passes. */
+  crt: boolean;
 }
 
 const TIERS: Record<QualityTier, QualitySettings> = {
-  high: { tier: 'high', maxResolution: 2 },
-  medium: { tier: 'medium', maxResolution: 1.5 },
-  low: { tier: 'low', maxResolution: 1 },
+  high: { tier: 'high', maxResolution: 2, crt: true },
+  medium: { tier: 'medium', maxResolution: 1.5, crt: true },
+  low: { tier: 'low', maxResolution: 1, crt: false },
 };
 
 const ORDER: QualityTier[] = ['high', 'medium', 'low'];
