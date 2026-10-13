@@ -10,7 +10,7 @@ import { formatCredits, type Wallet } from '../wallet';
 import { BalancePanel } from './balance-panel';
 import { Button } from './button';
 import { Label } from './label';
-import { MuteButton } from './mute-button';
+import { MusicButton, MuteButton } from './mute-button';
 import { arcadeFont, chromeFill } from './arcade-style';
 
 export interface GameHudOptions {
@@ -58,6 +58,7 @@ export class GameHud extends Container {
   readonly betCaption: Label;
   readonly panel: BalancePanel;
   readonly mute: MuteButton;
+  readonly music: MusicButton;
   readonly panelWidth: number;
 
   readonly achievements: Achievements;
@@ -133,6 +134,7 @@ export class GameHud extends Container {
     this.betCaption.anchor.set(0.5);
     this.panel = new BalancePanel(wallet, panelWidth, 76, appearance);
     this.mute = new MuteButton(sounds, 56, appearance);
+    this.music = new MusicButton(sounds, 56, appearance);
 
     this.action.onPress = () => this.onAction?.();
     this.betDown.onPress = () => this.changeBet(-1);
@@ -147,6 +149,7 @@ export class GameHud extends Container {
       this.betCaption,
       this.panel,
       this.mute,
+      this.music,
       this.toastView,
     );
     this.toastLabel.anchor.set(0.5);

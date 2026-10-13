@@ -115,6 +115,7 @@ export class ScratchScene extends Scene {
       hud.placeControls(column, 150 + table.height + 90);
       hud.panel.position.set(column - hud.panelWidth / 2, height - 92);
       hud.mute.position.set(width - 48, 44);
+      hud.music.position.set(width - 116, 44);
     } else {
       const table = this.odds.arrange(2);
       const cx = width / 2;
@@ -125,6 +126,7 @@ export class ScratchScene extends Scene {
       this.odds.position.set(cx - table.width / 2, controlsY + 112);
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
       hud.mute.position.set(width - 50, 60);
+      hud.music.position.set(width - 118, 60);
     }
   }
 

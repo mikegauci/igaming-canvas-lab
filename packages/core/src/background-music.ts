@@ -1,8 +1,8 @@
-import { renderRetrowaveWav } from './retrowave';
 import { sessionStore, type KeyValueStore } from './storage';
 
+const TRACK_URL = new URL('./audio/icl-background-loop.wav', import.meta.url).href;
 const POSITION_KEY = 'lab:music-position';
-const VOLUME = 0.45;
+const VOLUME = 0.28;
 
 /** One looping source, using the same AudioContext as the game's sound effects. */
 export class BackgroundMusic {
@@ -34,8 +34,12 @@ export class BackgroundMusic {
     if (this.destroyed || this.source) return;
     this.wanted = true;
     try {
-      // Generate and decode only once, after audio is unlocked, keeping boot work light.
-      this.buffer ??= this.context.decodeAudioData(renderRetrowaveWav());
+      // Fetch and decode only once, after audio unlock; music never holds up the page.
+      // The WAV's beat-aligned crossfade is baked in, with no encoder padding at the join.
+      this.buffer ??= fetch(TRACK_URL).then(async (response) => {
+        if (!response.ok) throw new Error(`Unable to load background music: ${response.status}`);
+        return this.context.decodeAudioData(await response.arrayBuffer());
+      });
       const buffer = await this.buffer;
       if (!this.wanted || this.destroyed || this.source || this.context.state !== 'running') return;
       this.offset %= buffer.duration;
@@ -47,7 +51,7 @@ export class BackgroundMusic {
       this.startedAt = this.context.currentTime;
       this.source = source;
     } catch {
-      // Audio is optional: decode/device failures must never interrupt gameplay.
+      // Audio is optional: network/decode/device failures must never interrupt gameplay.
       this.buffer = undefined;
     }
   }

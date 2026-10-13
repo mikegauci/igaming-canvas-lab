@@ -6,12 +6,14 @@ import { renderWav, type Tone } from './synth';
 type Listener = (muted: boolean) => void;
 
 /**
- * Sound effects and shared retrowave music with a mute toggle remembered across visits.
+ * Sound effects and shared music with independent mute toggles remembered across visits.
  * Sounds come from Assets (importing @pixi/sound registers the audio loader) or from `synth`.
  */
 export class SoundManager {
   private _muted: boolean;
+  private _musicMuted: boolean;
   private listeners = new Set<Listener>();
+  private musicListeners = new Set<Listener>();
   private readonly music?: BackgroundMusic;
   private readonly detach: () => void;
   private destroyed = false;
@@ -21,10 +23,14 @@ export class SoundManager {
     private readonly storageKey = 'lab:muted',
   ) {
     this._muted = store.get(storageKey) === '1';
+    const savedMusic = store.get(`${storageKey}:music`);
+    // Preserve an existing all-audio mute on the first visit with separate controls.
+    this._musicMuted = savedMusic === null ? this._muted : savedMusic === '1';
+    if (savedMusic === null) store.set(`${storageKey}:music`, this._musicMuted ? '1' : '0');
     if (this._muted) sound.muteAll();
     else sound.unmuteAll();
     const context = sound.context.audioContext;
-    if (context) this.music = new BackgroundMusic(context, this._muted);
+    if (context) this.music = new BackgroundMusic(context, this._musicMuted);
 
     // Browsers start audio suspended until a user gesture. @pixi/sound resumes on pointer
     // events; keyboard players (Space = spin) need this too. Keep gesture listeners so audio
@@ -79,13 +85,33 @@ export class SoundManager {
     this._muted = muted;
     if (muted) sound.muteAll();
     else sound.unmuteAll();
-    this.music?.setMuted(muted);
     this.store.set(this.storageKey, muted ? '1' : '0');
     for (const listener of this.listeners) listener(muted);
   }
 
   toggle(): void {
     this.setMuted(!this._muted);
+  }
+
+  get musicMuted(): boolean {
+    return this._musicMuted;
+  }
+
+  setMusicMuted(muted: boolean): void {
+    if (muted === this._musicMuted) return;
+    this._musicMuted = muted;
+    this.music?.setMuted(muted);
+    this.store.set(`${this.storageKey}:music`, muted ? '1' : '0');
+    for (const listener of this.musicListeners) listener(muted);
+  }
+
+  toggleMusic(): void {
+    this.setMusicMuted(!this._musicMuted);
+  }
+
+  onMusicChange(listener: Listener): () => void {
+    this.musicListeners.add(listener);
+    return () => this.musicListeners.delete(listener);
   }
 
   /** Registers generated sounds, e.g. `{ click: [{ freq: 900, duration: 0.03 }] }`. */
@@ -114,5 +140,6 @@ export class SoundManager {
     this.detach();
     this.music?.destroy();
     this.listeners.clear();
+    this.musicListeners.clear();
   }
 }

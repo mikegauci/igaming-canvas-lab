@@ -143,6 +143,7 @@ export class CrashScene extends Scene {
       this.autoButton.position.set(column, 410);
       hud.panel.position.set(column - hud.panelWidth / 2, height - 92);
       hud.mute.position.set(width - 48, 44);
+      hud.music.position.set(width - 116, 44);
     } else {
       const cx = width / 2;
       hud.placeHeader(cx, 70);
@@ -153,6 +154,7 @@ export class CrashScene extends Scene {
       this.autoButton.position.set(cx, 900);
       hud.panel.position.set(cx - hud.panelWidth / 2, height - 100);
       hud.mute.position.set(width - 50, 60);
+      hud.music.position.set(width - 118, 60);
     }
   }
 

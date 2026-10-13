@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import type { SoundManager } from '../sound';
 import { colors } from '../theme';
 
-/** Round speaker toggle bound to a SoundManager. Centred on its position. */
+/** Round audio toggle bound to a SoundManager. Centred on its position. */
 export class MuteButton extends Container {
   private readonly icon = new Graphics();
   private readonly unsubscribe: () => void;
@@ -11,6 +11,7 @@ export class MuteButton extends Container {
     private readonly sounds: SoundManager,
     private readonly size = 56,
     appearance: 'classic' | 'arcade' = 'classic',
+    private readonly channel: 'effects' | 'music' = 'effects',
   ) {
     super();
     const bg = new Graphics()
@@ -29,9 +30,15 @@ export class MuteButton extends Container {
     this.cursor = 'pointer';
     this.accessible = true;
     this.accessibleType = 'button';
-    this.on('pointertap', () => sounds.toggle());
+    this.on('pointertap', () => {
+      if (channel === 'music') sounds.toggleMusic();
+      else sounds.toggle();
+    });
 
-    this.unsubscribe = sounds.onChange(() => this.draw());
+    this.unsubscribe =
+      channel === 'music'
+        ? sounds.onMusicChange(() => this.draw())
+        : sounds.onChange(() => this.draw());
     this.draw();
   }
 
@@ -41,10 +48,39 @@ export class MuteButton extends Container {
   }
 
   private draw() {
-    const muted = this.sounds.muted;
+    const muted = this.channel === 'music' ? this.sounds.musicMuted : this.sounds.muted;
     const s = this.size / 56;
     const stroke = { color: colors.text, width: 3 * s, cap: 'round' as const };
-    this.accessibleTitle = muted ? 'Unmute sound' : 'Mute sound';
+    this.accessibleTitle =
+      this.channel === 'music'
+        ? muted
+          ? 'Turn music on'
+          : 'Turn music off'
+        : muted
+          ? 'Unmute sound effects'
+          : 'Mute sound effects';
+
+    if (this.channel === 'music') {
+      this.icon
+        .clear()
+        .moveTo(-7 * s, 8 * s)
+        .lineTo(-7 * s, -11 * s)
+        .lineTo(12 * s, -15 * s)
+        .lineTo(12 * s, 4 * s)
+        .moveTo(-7 * s, -5 * s)
+        .lineTo(12 * s, -9 * s)
+        .stroke({ ...stroke, color: muted ? colors.muted : colors.cyan })
+        .ellipse(-12 * s, 9 * s, 6 * s, 4 * s)
+        .ellipse(7 * s, 5 * s, 6 * s, 4 * s)
+        .fill(muted ? colors.muted : colors.cyan);
+      if (muted) {
+        this.icon
+          .moveTo(-19 * s, -18 * s)
+          .lineTo(20 * s, 18 * s)
+          .stroke({ ...stroke, color: colors.neon });
+      }
+      return;
+    }
 
     this.icon
       .clear()
@@ -66,5 +102,12 @@ export class MuteButton extends Container {
           .stroke(stroke);
       }
     }
+  }
+}
+
+/** Music-note toggle, independent of the speaker's sound-effects setting. */
+export class MusicButton extends MuteButton {
+  constructor(sounds: SoundManager, size = 56, appearance: 'classic' | 'arcade' = 'classic') {
+    super(sounds, size, appearance, 'music');
   }
 }

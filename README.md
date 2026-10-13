@@ -254,10 +254,10 @@ its screen and open the game. On phones the row becomes a swipeable carousel wit
 - **Stats on tap.** The pulse button next to the speaker shows FPS, draw calls, node count,
   renderer, quality tier and post-processing state, and remembers the choice. Both buttons are
   neon tubes like the rest of the HUD. `?debug=1` still forces the panel on.
-- **Retrowave soundtrack.** The lobby and all five games share an original 120 BPM loop with
-  detuned chords, octave bass, arpeggios and drum-machine beats. It is synthesized locally after
-  audio unlocks on a click/tap or keypress. The speaker mutes both music and effects and remembers
-  the choice. Music pauses in hidden tabs and retains its position across lobby/game navigation
+- **Background soundtrack.** The lobby and all five games share a user-supplied 100 BPM track,
+  trimmed to 48 beats (28.8 seconds) with a 40 ms crossfade for looping. It loads after audio
+  unlocks on a click/tap or keypress. The music-note button toggles music, and the speaker toggles
+  sound effects independently; both choices are remembered. Music pauses in hidden tabs and retains its position across lobby/game navigation
   in the same tab; page loads may leave a short gap while the next screen boots.
 - **Boot screen.** While Pixi downloads, a synthwave horizon in plain HTML and CSS (striped sun,
   scrolling perspective grid, chrome title, scanlines) shows real loading milestones, then

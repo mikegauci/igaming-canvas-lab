@@ -1,8 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackgroundMusic } from './background-music';
 import { memoryStore } from './storage';
 
-vi.mock('./retrowave', () => ({ renderRetrowaveWav: () => new ArrayBuffer(44) }));
+const fetchTrack = vi.fn();
+const trackBytes = new ArrayBuffer(44);
+
+beforeEach(() => {
+  fetchTrack.mockReset();
+  fetchTrack.mockResolvedValue({ ok: true, arrayBuffer: async () => trackBytes });
+  vi.stubGlobal('fetch', fetchTrack);
+});
+
+afterEach(() => vi.unstubAllGlobals());
 
 function audio() {
   const gain = {
@@ -23,7 +32,7 @@ function audio() {
     currentTime: 0,
     destination: {},
     createGain: () => gain,
-    decodeAudioData: vi.fn().mockResolvedValue({ duration: 32 }),
+    decodeAudioData: vi.fn().mockResolvedValue({ duration: 28.8 }),
     createBufferSource: () => {
       const source = {
         buffer: null,
@@ -51,7 +60,10 @@ describe('BackgroundMusic', () => {
     const { context, sources, music } = audio();
     const track = music();
     await Promise.all([track.start(), track.start(), track.start()]);
+    expect(fetchTrack).toHaveBeenCalledOnce();
+    expect(fetchTrack).toHaveBeenCalledWith(expect.stringContaining('icl-background-loop.wav'));
     expect(context.decodeAudioData).toHaveBeenCalledTimes(1);
+    expect(context.decodeAudioData).toHaveBeenCalledWith(trackBytes);
     expect(sources).toHaveLength(1);
     expect(sources[0]!.loop).toBe(true);
     expect(sources[0]!.start).toHaveBeenCalledWith(0, 0);
@@ -65,18 +77,19 @@ describe('BackgroundMusic', () => {
     context.currentTime = 37;
     track.pause();
     expect(sources[0]!.stop).toHaveBeenCalledOnce();
-    expect(store.get('lab:music-position')).toBe('5');
+    expect(Number(store.get('lab:music-position'))).toBeCloseTo(8.2);
     context.currentTime = 100;
     await track.start();
-    expect(sources[1]!.start).toHaveBeenCalledWith(0, 5);
+    expect(sources[1]!.start).toHaveBeenCalledWith(0, expect.closeTo(8.2));
     expect(sources[1]!.loop).toBe(true);
     expect(context.decodeAudioData).toHaveBeenCalledOnce();
+    expect(fetchTrack).toHaveBeenCalledOnce();
   });
 
   it('carries musical position into a new page, even with an invalid stored position', async () => {
     const { sources, music } = audio();
     await music(memoryStore({ 'lab:music-position': '69' })).start();
-    expect(sources[0]!.start).toHaveBeenCalledWith(0, 5);
+    expect(sources[0]!.start).toHaveBeenCalledWith(0, expect.closeTo(11.4));
     await music(memoryStore({ 'lab:music-position': 'NaN' })).start();
     expect(sources[1]!.start).toHaveBeenCalledWith(0, 0);
   });
@@ -91,8 +104,9 @@ describe('BackgroundMusic', () => {
     );
     const track = music();
     const loading = track.start();
+    await vi.waitFor(() => expect(context.decodeAudioData).toHaveBeenCalledOnce());
     track.pause();
-    decoded({ duration: 32 });
+    decoded({ duration: 28.8 });
     await loading;
     expect(sources).toHaveLength(0);
     await track.start();
@@ -109,7 +123,7 @@ describe('BackgroundMusic', () => {
     expect(gain.gain.value).toBe(0);
     await track.start();
     track.setMuted(false);
-    expect(gain.gain.setTargetAtTime).toHaveBeenLastCalledWith(0.45, 0, 0.025);
+    expect(gain.gain.setTargetAtTime).toHaveBeenLastCalledWith(0.28, 0, 0.025);
     track.setMuted(true);
     expect(gain.gain.setTargetAtTime).toHaveBeenLastCalledWith(0, 0, 0.025);
   });
@@ -122,5 +136,20 @@ describe('BackgroundMusic', () => {
     expect(sources).toHaveLength(0);
     await track.start();
     expect(sources).toHaveLength(1);
+  });
+
+  it.each([
+    () => Promise.reject(new Error('Offline')),
+    () => Promise.resolve({ ok: false, status: 404 }),
+  ])('contains download failures and allows a later retry', async (failure) => {
+    const { context, sources, music } = audio();
+    fetchTrack.mockImplementationOnce(failure);
+    const track = music();
+    await expect(track.start()).resolves.toBeUndefined();
+    expect(context.decodeAudioData).not.toHaveBeenCalled();
+    expect(sources).toHaveLength(0);
+    await track.start();
+    expect(sources).toHaveLength(1);
+    expect(fetchTrack).toHaveBeenCalledTimes(2);
   });
 });
