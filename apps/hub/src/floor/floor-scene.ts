@@ -20,7 +20,7 @@ import { CrtFilter } from './crt-filter';
 import { Motes } from './motes';
 import { GAMES, type GameInfo } from './games';
 import { musicGlyph, NeonIconButton, pulseGlyph, speakerGlyph } from './icon-button';
-import { NeonTitle, neonStyle, strike } from './neon';
+import { hudStyle, NeonTitle, strike } from './neon';
 import type { Quality, QualitySettings } from './quality';
 
 export interface FloorSceneOptions {
@@ -149,7 +149,7 @@ export class FloorScene extends Scene {
 
     this.caption.anchor.set(0.5);
     this.hint.anchor.set(0.5);
-    this.credits = new Text({ text: '', style: neonStyle(colors.gold, 18, { letterSpacing: 1 }) });
+    this.credits = new Text({ text: '', style: hudStyle(colors.gold, 18, { letterSpacing: 1 }) });
     this.credits.anchor.set(0, 0.5);
     const renderCredits = () => (this.credits.text = `CREDITS ${formatCredits(wallet.balance)}`);
     renderCredits();
@@ -157,7 +157,7 @@ export class FloorScene extends Scene {
 
     this.badgesDone = new Text({
       text: '★ ALL BADGES COLLECTED · THANKS FOR PLAYING ★',
-      style: neonStyle(0x7cff6b, 12, { letterSpacing: 1 }),
+      style: hudStyle(0x7cff6b, 12, { letterSpacing: 1 }),
     });
     this.badgesDone.anchor.set(0, 0.5);
     this.buildBadges(achievements);
